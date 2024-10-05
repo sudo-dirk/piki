@@ -10,3 +10,6 @@
 [submodule "users"]
 	path = users
 	url = https://git.mount-mockery.de/django_lib/users.git
+[submodule "stringtools"]
+	path = stringtools
+	url = https://git.mount-mockery.de/pylib/stringtools.git
