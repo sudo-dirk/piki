@@ -17,6 +17,9 @@ from themes import Context
 
 logger = logging.getLogger(__name__)
 
+# TODO: /!\ Deactivate self registration
+# TODO: /!\ Remove config and add config_example with data from mm_tmux /!\
+
 
 def root(request):
     return HttpResponseRedirect(url_page(request, config.STARTPAGE))
@@ -79,7 +82,7 @@ def edit(request, rel_path):
                     # TODO: Add translation
                     title=_("Edit page %s") % repr(p.title),
                     upload_path=p.attachment_path,
-                    page_content=mycreole.render(request, page_txt, p.attachment_path, 'next-anchor')
+                    page_content=p.render_text(request, page_txt)
                 )
                 return render(request, 'pages/page_form.html', context=context)
             else:

@@ -21,7 +21,12 @@ MAIN = mycreole.render_simple(_(
 CREOLE = mycreole.mycreole_help_pagecontent()
 CREOLE += mycreole.render_simple("""
 = Piki Markup
-{{{[[rel_path_to_page|Name]]}}} will result in a Link to the given wiki page.
+| {{{[[rel_path_to_page|Name]]}}} | will result in a Link to the given wiki page. |
+| {{{<<subpages>>}}} | will result in a list of all subpages below the current page. |
+| {{{<<subpages=N,startswith>>}}} | will result in a list of subpages below the current page.\
+                                    N will reduce the depth of the subpages to N. \
+                                    startswith  will reduce the hits to all pages starting with the given string. 
+                                    You can give one or both Parameters. |
 """)
 
 ACCESS = mycreole.render_simple(_("""

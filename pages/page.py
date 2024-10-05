@@ -29,9 +29,15 @@ class creol_page(object):
     def attachment_path(self):
         return os.path.join(self.content_folder_name, self.FOLDER_ATTACHMENTS)
 
+    def __content_folder_filter__(self, folder):
+        return folder.replace('/', '::')
+
+    def __folder_content_filter__(self, folder):
+        return folder.replace('::', '/')
+
     @property
     def content_folder_name(self):
-        return self._rel_path.replace('/', '::')
+        return self.__content_folder_filter__(self._rel_path)
 
     @property
     def content_file_name(self):
@@ -54,7 +60,46 @@ class creol_page(object):
 
     def render_to_html(self, request):
         if self.is_available():
-            return mycreole.render(request, self.raw_page_src, self.attachment_path, "next_anchor")
+            return self.render_text(request, self.raw_page_src)
         else:
             messages.unavailable_msg_page(request, self._rel_path)
             return ""
+
+    def render_text(self, request, txt):
+        macros = {
+            "subpages": self.macro_subpages
+        }
+        return mycreole.render(request, txt, self.attachment_path, "next_anchor", macros=macros)
+
+    def macro_subpages(self, *args, **kwargs):
+        def parse_depth(s: str):
+            try:
+                return int(s)
+            except ValueError:
+                pass
+
+        params = kwargs.get('').split(",")
+        depth = parse_depth(params[0])
+        if len(params) == 2:
+            startname = params[1]
+        elif depth is None:
+            startname = params[0]
+        if depth is None:
+            depth = 9999
+        #
+        rv = ""
+        pathlist = fstools.dirlist(settings.PAGES_ROOT, rekursive=False)
+        pathlist.sort()
+        for path in pathlist:
+            dirname = os.path.basename(path)
+            contentname = self.__folder_content_filter__(dirname)
+            #
+            my_dirname = self.__content_folder_filter__(self._rel_path)
+            #
+            if dirname.startswith(my_dirname) and dirname != my_dirname:
+                name = contentname[len(self._rel_path)+1:]
+                if name.count('/') <= depth and name.startswith(startname):
+                    rv += f'  <li><a href="{contentname}">{name}</a></li>\n'
+        if len(rv) > 0:
+            rv = "<ul>\n" + rv + "</ul>\n"
+        return rv

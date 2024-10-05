@@ -169,9 +169,6 @@ MYCREOLE_BAR = {
     'navibar': 'pages.context.navigationbar',
     'menubar': 'pages.context.menubar',
 }
-MYCREOLE_EXT_FILTERS = [
-    # 'pages.creole.page_link_filter',
-]
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
