@@ -1,10 +1,12 @@
 from django.conf import settings
 
+import fstools
+from pages import messages
 import mycreole
 import os
 
 
-class page(object):
+class creol_page(object):
     SPLITCHAR = ":"
     FOLDER_ATTACHMENTS = "attachments"
     FOLDER_CONTENT = 'content'
@@ -35,13 +37,24 @@ class page(object):
     def content_file_name(self):
         return os.path.join(settings.PAGES_ROOT, self.content_folder_name, self.FOLDER_CONTENT, self.FILE_NAME)
 
-    def __read_content__(self):
-        if self.is_available():
+    @property
+    def raw_page_src(self):
+        try:
             with open(self.content_file_name, 'r') as fh:
                 return fh.read()
-        else:
-            # TODO: Create message for creation or no content dependent of user has write access
-            return "Page not available. Create it."
+        except FileNotFoundError:
+            return ""
+
+    def update_page(self, page_txt):
+        folder = os.path.dirname(self.content_file_name)
+        if not os.path.exists(folder):
+            fstools.mkdir(folder)
+        with open(self.content_file_name, 'w') as fh:
+            fh.write(page_txt)
 
     def render_to_html(self, request):
-        return mycreole.render(request, self.__read_content__(), self.attachment_path, "next_anchor")
+        if self.is_available():
+            return mycreole.render(request, self.raw_page_src, self.attachment_path, "next_anchor")
+        else:
+            messages.unavailable_msg_page(request, self._rel_path)
+            return ""

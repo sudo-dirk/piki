@@ -1,0 +1,20 @@
+{% extends "themes/"|add:settings.page_theme|add:"/base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+    <form class="form" method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <input type="submit" name="save" value="{% trans "Save" %}" class="button" />
+      {% if not disable_preview %}<input type="submit"  formaction="#preview" name="preview" value="{% trans "Preview" %}" class="button" />{% endif %}
+      {{ form_comment.as_p }}
+    </form>
+
+    {% if page_content %}
+      <div class="preview-spacer" id="preview"></div>
+      <div class="preview">
+        {{ page_content|safe }}
+      </div>
+    {% endif %}
+{% endblock content %}
