@@ -1,3 +1,8 @@
+# piki
+data/pages
+data/static
+db.sqlite3
+
 # ---> Python
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,0 +1,12 @@
+[submodule "fstools"]
+	path = fstools
+	url = https://git.mount-mockery.de/pylib/fstools.git
+[submodule "mycreole"]
+	path = mycreole
+	url = https://git.mount-mockery.de/django_lib/mycreole.git
+[submodule "themes"]
+	path = themes
+	url = https://git.mount-mockery.de/django_lib/themes.git
+[submodule "users"]
+	path = users
+	url = https://git.mount-mockery.de/django_lib/users.git

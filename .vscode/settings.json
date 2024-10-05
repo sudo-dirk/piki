@@ -1,0 +1,14 @@
+{
+  "python.defaultInterpreterPath": "./venv/bin/python",
+  "autopep8.args": ["--max-line-length=150"],
+  "[python]": {
+    "python.formatting.provider": "none",
+    "editor.defaultFormatter": "ms-python.autopep8",
+    "editor.formatOnSave": true
+  },
+  "editor.fontSize": 14,
+  "emmet.includeLanguages": { "django-html": "html" },
+  "python.testing.pytestArgs": ["-v", "--cov", "--cov-report=xml", "__test__"],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true
+}
