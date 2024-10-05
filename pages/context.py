@@ -42,7 +42,7 @@ def context_adaption(context, request, **kwargs):
 
 def navigationbar(context, request, caller_name, **kwargs):
     bar = context[context.NAVIGATIONBAR]
-    path = kwargs.get("rel_path")
+    path = kwargs.get("rel_path", "")
     while len(path) > 0 and path != os.path.sep:
         bar.append_entry(*navigation_entry_parameters(request, path))
         path = os.path.dirname(path)
@@ -126,4 +126,3 @@ def add_manageupload_menu(request, bar, upload_path):
 def finalise_bar(request, bar):
     if len(bar) == 0:
         bar.append_entry(*empty_entry_parameters(request))
-
