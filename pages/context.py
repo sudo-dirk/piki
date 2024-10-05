@@ -1,5 +1,6 @@
 import inspect
 import logging
+import os
 
 from django.utils.translation import gettext as _
 
@@ -21,6 +22,7 @@ ATTACHMENT_UID = 'attachment'
 BACK_UID = 'back'
 EDIT_UID = 'edit'
 HELP_UID = 'help'
+NAVIGATION_ENTRY_UID = 'navigation-%s'
 
 
 def context_adaption(context, request, **kwargs):
@@ -40,8 +42,11 @@ def context_adaption(context, request, **kwargs):
 
 def navigationbar(context, request, caller_name, **kwargs):
     bar = context[context.NAVIGATIONBAR]
+    path = kwargs.get("rel_path")
+    while len(path) > 0 and path != os.path.sep:
+        bar.append_entry(*navigation_entry_parameters(request, path))
+        path = os.path.dirname(path)
     add_back_menu(request, bar)
-    # TODO: Add the pages navigation, if source is pages
     finalise_bar(request, bar)
 
 
@@ -53,6 +58,17 @@ def add_back_menu(request, bar):
         'javascript:history.back()',                # url
         True,                                       # left
         False                                       # active
+    )
+
+
+def navigation_entry_parameters(request, path):
+    return (
+        NAVIGATION_ENTRY_UID % os.path.basename(path),          # uid
+        '/' + os.path.basename(path),                           # name
+        None,                                                   # icon
+        pages.url_page(request, path),                          # url
+        False,                                                  # left
+        False                                                   # active
     )
 
 
