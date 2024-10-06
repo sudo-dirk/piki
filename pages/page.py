@@ -1,5 +1,9 @@
 from django.conf import settings
 
+# TODO: PRIO: BugFix if subpages filter is used without parameters
+# TODO: PRIO: Add wildcards for subpages filter
+# TODO: Add whoosh and search
+
 import fstools
 from pages import messages
 import mycreole
@@ -69,7 +73,7 @@ class creol_page(object):
         macros = {
             "subpages": self.macro_subpages
         }
-        return mycreole.render(request, txt, self.attachment_path, "next_anchor", macros=macros)
+        return mycreole.render(request, txt, self.attachment_path, macros=macros)
 
     def macro_subpages(self, *args, **kwargs):
         def parse_depth(s: str):

@@ -31,7 +31,6 @@ def context_adaption(context, request, **kwargs):
         context.set_additional_title(kwargs.pop('title'))
     except KeyError:
         pass    # no title in kwargs
-    menubar_users(context[context.MENUBAR], request)
     menubar(context, request, caller_name, **kwargs)
     actionbar(context, request, caller_name, **kwargs)
     navigationbar(context, request, caller_name, **kwargs)
@@ -74,6 +73,7 @@ def navigation_entry_parameters(request, path):
 
 def menubar(context, request, caller_name, **kwargs):
     bar = context[context.MENUBAR]
+    menubar_users(bar, request)
     add_help_menu(request, bar)
     finalise_bar(request, bar)
 
