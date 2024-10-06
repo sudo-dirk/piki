@@ -2,6 +2,7 @@
 data/pages
 data/static
 db.sqlite3
+config.py
 
 # ---> Python
 # Byte-compiled / optimized / DLL files
