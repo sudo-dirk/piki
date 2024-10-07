@@ -5,7 +5,7 @@ from django.conf import settings
 # TODO: Add whoosh and search
 
 import fstools
-from pages import messages
+from pages import messages, url_page
 import mycreole
 import os
 
@@ -16,8 +16,9 @@ class creol_page(object):
     FOLDER_CONTENT = 'content'
     FILE_NAME = 'page'
 
-    def __init__(self, rel_path) -> None:
+    def __init__(self, request, rel_path) -> None:
         self._rel_path = rel_path
+        self._request = request
 
     def rel_path_is_valid(self):
         return not self.SPLITCHAR in self._rel_path
@@ -62,11 +63,11 @@ class creol_page(object):
         with open(self.content_file_name, 'w') as fh:
             fh.write(page_txt)
 
-    def render_to_html(self, request):
+    def render_to_html(self):
         if self.is_available():
-            return self.render_text(request, self.raw_page_src)
+            return self.render_text(self._request, self.raw_page_src)
         else:
-            messages.unavailable_msg_page(request, self._rel_path)
+            messages.unavailable_msg_page(self._request, self._rel_path)
             return ""
 
     def render_text(self, request, txt):
@@ -82,7 +83,7 @@ class creol_page(object):
             except ValueError:
                 pass
 
-        params = kwargs.get('').split(",")
+        params = kwargs.get('', '').split(",")
         depth = parse_depth(params[0])
         if len(params) == 2:
             startname = params[1]
@@ -95,15 +96,12 @@ class creol_page(object):
         pathlist = fstools.dirlist(settings.PAGES_ROOT, rekursive=False)
         pathlist.sort()
         for path in pathlist:
-            dirname = os.path.basename(path)
-            contentname = self.__folder_content_filter__(dirname)
+            contentname = self.__folder_content_filter__(os.path.basename(path))
             #
-            my_dirname = self.__content_folder_filter__(self._rel_path)
-            #
-            if dirname.startswith(my_dirname) and dirname != my_dirname:
+            if contentname.startswith(self._rel_path) and contentname != self._rel_path:
                 name = contentname[len(self._rel_path)+1:]
                 if name.count('/') <= depth and name.startswith(startname):
-                    rv += f'  <li><a href="{contentname}">{name}</a></li>\n'
+                    rv += f'  <li><a href="{url_page(self._request, contentname)}">{name}</a></li>\n'
         if len(rv) > 0:
             rv = "<ul>\n" + rv + "</ul>\n"
         return rv
