@@ -72,25 +72,37 @@ class creol_page(object):
 
     def render_text(self, request, txt):
         macros = {
-            "subpages": self.macro_subpages
+            "subpages": self.macro_subpages,
+            "allpages": self.macro_allpages,
         }
         return mycreole.render(request, txt, self.attachment_path, macros=macros)
 
+    def macro_allpages(self, *args, **kwargs):
+        kwargs["allpages"] = True
+        return self.macro_subpages(*args, **kwargs)
+
     def macro_subpages(self, *args, **kwargs):
+        allpages = kwargs.pop("allpages", False)
+        #
+
         def parse_depth(s: str):
             try:
                 return int(s)
             except ValueError:
                 pass
 
-        params = kwargs.get('', '').split(",")
-        depth = parse_depth(params[0])
-        if len(params) == 2:
-            startname = params[1]
-        elif depth is None:
-            startname = params[0]
+        params = kwargs.get('', '')
+        startname = ''
+        depth = parse_depth(params)
         if depth is None:
-            depth = 9999
+            params = params.split(",")
+            depth = parse_depth(params[0])
+            if len(params) == 2:
+                startname = params[1]
+            elif depth is None:
+                startname = params[0]
+            if depth is None:
+                depth = 9999
         #
         rv = ""
         pathlist = fstools.dirlist(settings.PAGES_ROOT, rekursive=False)
@@ -98,9 +110,12 @@ class creol_page(object):
         for path in pathlist:
             contentname = self.__folder_content_filter__(os.path.basename(path))
             #
-            if contentname.startswith(self._rel_path) and contentname != self._rel_path:
-                name = contentname[len(self._rel_path)+1:]
-                if name.count('/') <= depth and name.startswith(startname):
+            if (contentname.startswith(self._rel_path) or allpages) and contentname != self._rel_path:
+                if allpages:
+                    name = contentname
+                else:
+                    name = contentname[len(self._rel_path)+1:]
+                if name.count('/') < depth and name.startswith(startname):
                     rv += f'  <li><a href="{url_page(self._request, contentname)}">{name}</a></li>\n'
         if len(rv) > 0:
             rv = "<ul>\n" + rv + "</ul>\n"
