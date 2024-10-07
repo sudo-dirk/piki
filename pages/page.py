@@ -1,6 +1,5 @@
 from django.conf import settings
 
-# TODO: PRIO: BugFix if subpages filter is used without parameters
 # TODO: PRIO: Add wildcards for subpages filter
 # TODO: Add whoosh and search
 
@@ -105,10 +104,13 @@ class creol_page(object):
                 depth = 9999
         #
         rv = ""
-        pathlist = fstools.dirlist(settings.PAGES_ROOT, rekursive=False)
-        pathlist.sort()
-        for path in pathlist:
-            contentname = self.__folder_content_filter__(os.path.basename(path))
+        # create a rel_path list
+        pathlist = [self.__folder_content_filter__(os.path.basename(path)) for path in fstools.dirlist(settings.PAGES_ROOT, rekursive=False)]
+        # sort basename
+        pathlist.sort(key=os.path.basename)
+
+        last_char = None
+        for contentname in pathlist:
             #
             if (contentname.startswith(self._rel_path) or allpages) and contentname != self._rel_path:
                 if allpages:
@@ -116,7 +118,12 @@ class creol_page(object):
                 else:
                     name = contentname[len(self._rel_path)+1:]
                 if name.count('/') < depth and name.startswith(startname):
+                    if last_char != os.path.basename(name)[0].upper():
+                        last_char = os.path.basename(name)[0].upper()
+                        if last_char is not None:
+                            rv += "</ul>\n"
+                        rv += f'<h3>{last_char}</h3>\n<ul>\n'
                     rv += f'  <li><a href="{url_page(self._request, contentname)}">{name}</a></li>\n'
         if len(rv) > 0:
-            rv = "<ul>\n" + rv + "</ul>\n"
+            rv += "</ul>\n"
         return rv
