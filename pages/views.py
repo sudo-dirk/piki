@@ -15,7 +15,11 @@ import mycreole
 from .page import creol_page
 from themes import Context
 
-logger = logging.getLogger(__name__)
+try:
+    from config import APP_NAME as ROOT_LOGGER_NAME
+except ImportError:
+    ROOT_LOGGER_NAME = 'root'
+logger = logging.getLogger(ROOT_LOGGER_NAME).getChild(__name__)
 
 # TODO: /!\ Deactivate self registration
 # TODO: /!\ Remove config and add config_example with data from mm_tmux /!\
@@ -28,9 +32,9 @@ def root(request):
 def page(request, rel_path):
     context = Context(request)      # needs to be executed first because of time mesurement
     #
-    p = creol_page(rel_path)
+    p = creol_page(request, rel_path)
     if access.read_page(request, rel_path):
-        page_content = p.render_to_html(request)
+        page_content = p.render_to_html()
     else:
         messages.permission_denied_msg_page(request, rel_path)
         page_content = ""
@@ -50,7 +54,7 @@ def edit(request, rel_path):
     if access.write_page(request, rel_path):
         context = Context(request)      # needs to be executed first because of time mesurement
         #
-        p = creol_page(rel_path)
+        p = creol_page(request, rel_path)
         #
         if not request.POST:
             form = EditForm(page_data=p.raw_page_src)
