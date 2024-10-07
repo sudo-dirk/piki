@@ -41,7 +41,14 @@ def context_adaption(context, request, **kwargs):
 
 def navigationbar(context, request, caller_name, **kwargs):
     bar = context[context.NAVIGATIONBAR]
-    path = kwargs.get("rel_path", "")
+    if caller_name == "mycreole-attachments":
+        next = kwargs.get("next")
+        if next.count("/") >= 2:
+            path = next[next.find("/", 2) + 1:]
+        else:
+            path = ""
+    else:
+        path = kwargs.get("rel_path", "")
     while len(path) > 0 and path != os.path.sep:
         bar.append_entry(*navigation_entry_parameters(request, path))
         path = os.path.dirname(path)
