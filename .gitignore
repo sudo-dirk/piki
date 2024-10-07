@@ -1,4 +1,5 @@
 # piki
+data/media
 data/pages
 data/static
 db.sqlite3
