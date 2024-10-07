@@ -22,6 +22,7 @@ ATTACHMENT_UID = 'attachment'
 BACK_UID = 'back'
 EDIT_UID = 'edit'
 HELP_UID = 'help'
+INDEX_UID = 'index'
 NAVIGATION_ENTRY_UID = 'navigation-%s'
 
 
@@ -81,18 +82,30 @@ def navigation_entry_parameters(request, path):
 def menubar(context, request, caller_name, **kwargs):
     bar = context[context.MENUBAR]
     menubar_users(bar, request)
-    add_help_menu(request, bar)
+    add_help_menu(request, bar, "current_help_page" in kwargs)
+    add_index_menu(request, bar, kwargs.get("rel_path", ''))
     finalise_bar(request, bar)
 
 
-def add_help_menu(request, bar):
+def add_help_menu(request, bar, active):
     bar.append_entry(
         HELP_UID,                                   # uid
         _('Help'),                                  # name
         color_icon_url(request, 'help.png'),        # icon
         pages.url_helpview(request, 'main'),        # url
         True,                                       # left
-        False                                       # active
+        active                                      # active
+    )
+
+
+def add_index_menu(request, bar, rel_path):
+    bar.append_entry(
+        INDEX_UID,                                  # uid
+        _('Index'),                                 # name
+        color_icon_url(request, 'info.png'),        # icon
+        pages.url_page(request, 'index'),           # url
+        True,                                       # left
+        request.path == "/page/index"               # active
     )
 
 
