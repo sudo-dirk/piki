@@ -1,7 +1,7 @@
 # TODO: Implement access control for pages
 
 def read_page(request, rel_path):
-    return True
+    return "private" not in rel_path or write_page(request, rel_path)
 
 
 def write_page(request, rel_path):
