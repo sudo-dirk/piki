@@ -2,8 +2,8 @@ import inspect
 import logging
 import os
 
+from django.conf import settings
 from django.utils.translation import gettext as _
-
 
 from pages import access
 from .help import actionbar as actionbar_add_help
@@ -12,11 +12,7 @@ import pages
 from themes import empty_entry_parameters, gray_icon_url, color_icon_url
 from users.context import menubar as menubar_users
 
-try:
-    from config import APP_NAME as ROOT_LOGGER_NAME
-except ImportError:
-    ROOT_LOGGER_NAME = 'root'
-logger = logging.getLogger(ROOT_LOGGER_NAME).getChild(__name__)
+logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
 
 ATTACHMENT_UID = 'attachment'
 BACK_UID = 'back'

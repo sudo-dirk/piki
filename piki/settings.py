@@ -10,10 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
-import config
-from config import APP_NAME as ROOT_LOGGER_NAME
-import os
 from pathlib import Path
+
+import config
+import os
 import random
 import stat
 import sys
@@ -21,40 +21,6 @@ import sys
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Check permission of config.py
-#
-if sys.platform == 'linux' or sys.platform == 'linux2':
-    st = os.stat(os.path.join(BASE_DIR, 'config.py'))
-    if st.st_mode & stat.S_IRGRP or st.st_mode & stat.S_IROTH:
-        raise PermissionError("conig.py is readable by group or others.")
-
-# Default values, if not defined in config.py
-#
-USER_CONFIG_DEFAULTS = {
-    'DEBUG': False,
-    'SECRET_KEY': None,
-    'DEFAULT_THEME': 'clear-blue',
-    'ALLOWED_HOSTS': ['127.0.0.1', 'localhost', ],
-    'CSRF_TRUSTED_ORIGINS': [],
-}
-
-# Set configuration parameters
-#
-thismodule = sys.modules[__name__]
-for property_name in USER_CONFIG_DEFAULTS:
-    try:
-        value = getattr(config, property_name)
-    except AttributeError:
-        value = USER_CONFIG_DEFAULTS[property_name]
-    setattr(thismodule, property_name, value)
-
-# SECURITY WARNING: keep the secret key used in production secret!
-#
-if SECRET_KEY is None:
-    chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-    s_key = ''.join([random.choice(chars) for n in range(50)])
-    secret_key_warning = "You need to create a config.py file including at least a SECRET_KEY definition (e.g.: --> %s <--).    " % repr(s_key)
-    raise KeyError(secret_key_warning)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -148,8 +114,72 @@ USE_I18N = True
 
 USE_TZ = True
 
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.1/howto/static-files/
+STATIC_ROOT = os.path.join(BASE_DIR, 'data', 'static')
+STATIC_URL = 'static/'
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'data', 'media')
+MEDIA_URL = '/media/'
+
+MYCREOLE_ROOT = os.path.join(BASE_DIR, 'data', 'pages')
+MYCREOLE_ATTACHMENT_ACCESS = {
+    'read': 'pages.access.read_attachment',
+    'modify': 'pages.access.modify_attachment',
+}
+MYCREOLE_BAR = {
+    'navibar': 'pages.context.navigationbar',
+    'menubar': 'pages.context.menubar',
+}
+
+PAGES_ROOT = os.path.join(BASE_DIR, 'data', 'pages')
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Check permission of config.py
+#
+if sys.platform == 'linux' or sys.platform == 'linux2':
+    st = os.stat(os.path.join(BASE_DIR, 'config.py'))
+    if st.st_mode & stat.S_IRGRP or st.st_mode & stat.S_IROTH:
+        raise PermissionError("conig.py is readable by group or others.")
+
+# Default values, if not defined in config.py
+#
+USER_CONFIG_DEFAULTS = {
+    'DEBUG': False,
+    'SECRET_KEY': None,
+    'DEFAULT_THEME': 'clear-blue',
+    'ALLOWED_HOSTS': ['127.0.0.1', 'localhost', ],
+    'CSRF_TRUSTED_ORIGINS': [],
+}
+
+# Set configuration parameters
+#
+thismodule = sys.modules[__name__]
+for property_name in USER_CONFIG_DEFAULTS:
+    try:
+        value = getattr(config, property_name)
+    except AttributeError:
+        value = USER_CONFIG_DEFAULTS[property_name]
+    setattr(thismodule, property_name, value)
+
+# SECURITY WARNING: keep the secret key used in production secret!
+#
+if SECRET_KEY is None:
+    chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
+    s_key = ''.join([random.choice(chars) for n in range(50)])
+    secret_key_warning = "You need to create a config.py file including at least a SECRET_KEY definition (e.g.: --> %s <--).    " % repr(s_key)
+    raise KeyError(secret_key_warning)
+
+
 # Logging Configuration
 #
+ROOT_LOGGER_NAME = 'apps'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -186,27 +216,3 @@ File "%(pathname)s", line %(lineno)d, in %(funcName)s
     },
 }
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'data', 'static')
-STATIC_URL = 'static/'
-
-MEDIA_ROOT = os.path.join(BASE_DIR, 'data', 'media')
-MEDIA_URL = '/media/'
-
-PAGES_ROOT = os.path.join(BASE_DIR, 'data', 'pages')
-
-MYCREOLE_ROOT = os.path.join(BASE_DIR, 'data', 'pages')
-MYCREOLE_ATTACHMENT_ACCESS = {
-    'read': 'pages.access.read_attachment',
-    'modify': 'pages.access.modify_attachment',
-}
-MYCREOLE_BAR = {
-    'navibar': 'pages.context.navigationbar',
-    'menubar': 'pages.context.menubar',
-}
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

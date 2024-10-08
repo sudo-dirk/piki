@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
 from django.utils.translation import gettext as _
@@ -15,11 +16,7 @@ import mycreole
 from .page import creol_page
 from themes import Context
 
-try:
-    from config import APP_NAME as ROOT_LOGGER_NAME
-except ImportError:
-    ROOT_LOGGER_NAME = 'root'
-logger = logging.getLogger(ROOT_LOGGER_NAME).getChild(__name__)
+logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
 
 
 def root(request):
