@@ -3,6 +3,8 @@
 #
 STARTPAGE = "startpage"
 
+USERS_SELF_REGISTRATION = False
+
 
 #
 # General settings
@@ -23,4 +25,3 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', ]
 # Style settings
 #
 DEFAULT_THEME = 'clear-blue'
-
