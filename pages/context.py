@@ -53,6 +53,7 @@ def navigationbar(context, request, caller_name, **kwargs):
     while len(path) > 0 and path != os.path.sep:
         bar.append_entry(*navigation_entry_parameters(request, path))
         path = os.path.dirname(path)
+    bar.append_entry(*empty_entry_parameters(request))
     add_back_menu(request, bar)
     finalise_bar(request, bar)
 
