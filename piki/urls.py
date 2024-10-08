@@ -24,14 +24,18 @@ import pages.views
 urlpatterns = [
     path('admin/', admin.site.urls),
     #
+    # page
     path('', pages.views.root, name='page-root'),
     path('page/', pages.views.root, name='page-root'),
     path('page/<path:rel_path>', pages.views.page, name='page-page'),
     path('pageedit/<path:rel_path>/', pages.views.edit, name='page-edit'),
     path('helpview/', pages.views.helpview, name='page-helpview'),
     path('helpview/<str:page>', pages.views.helpview, name='page-helpview'),
+    # theme
     path('search/', pages.views.search, name='search'),
+    # mycreole
     path('mycreole/', include('mycreole.urls')),
+    # users
     path('users/', include('users.urls')),
 ]
 

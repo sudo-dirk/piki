@@ -21,9 +21,6 @@ except ImportError:
     ROOT_LOGGER_NAME = 'root'
 logger = logging.getLogger(ROOT_LOGGER_NAME).getChild(__name__)
 
-# TODO: /!\ Deactivate self registration
-# TODO: /!\ Remove config and add config_example with data from mm_tmux /!\
-
 
 def root(request):
     return HttpResponseRedirect(url_page(request, config.STARTPAGE))

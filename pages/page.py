@@ -1,8 +1,5 @@
 from django.conf import settings
 
-# TODO: PRIO: Add wildcards for subpages filter
-# TODO: Add whoosh and search
-
 import fstools
 from pages import messages, url_page
 import mycreole
