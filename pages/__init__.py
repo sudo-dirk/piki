@@ -1,8 +1,11 @@
 from django.urls.base import reverse
 
 
-def url_page(request, rel_path):
-    return reverse('page-page', kwargs={'rel_path': rel_path})
+def url_page(request, rel_path, **kwargs):
+    params = "&".join([f"{key}" + ("" if kwargs[key] is None else f"={kwargs[key]}") for key in kwargs])
+    if len(params) > 0:
+        params = "?" + params
+    return reverse('page-page', kwargs={'rel_path': rel_path}) + params
 
 
 def url_helpview(request, page):

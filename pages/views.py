@@ -28,9 +28,14 @@ def root(request):
 def page(request, rel_path):
     context = Context(request)      # needs to be executed first because of time mesurement
     #
+    meta = "meta" in request.GET
+    #
     p = creole_page(request, rel_path)
     if access.read_page(request, rel_path):
-        page_content = p.render_to_html()
+        if meta:
+            page_content = p.render_meta()
+        else:
+            page_content = p.render_to_html()
     else:
         messages.permission_denied_msg_page(request, rel_path)
         page_content = ""

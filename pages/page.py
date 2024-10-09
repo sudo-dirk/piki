@@ -1,5 +1,6 @@
+from datetime import datetime
 from django.conf import settings
-
+from django.utils.translation import gettext as _
 import fstools
 import json
 import logging
@@ -7,6 +8,8 @@ from pages import messages, url_page
 import mycreole
 import os
 import time
+from users.models import get_userprofile
+import zoneinfo
 
 logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
 
@@ -140,6 +143,23 @@ class creole_page(base_page):
         else:
             messages.unavailable_msg_page(self._request, self.rel_path)
             return ""
+
+    def render_meta(self):
+        def str_date(tm):
+            up = get_userprofile(self._request.user)
+            tz = zoneinfo.ZoneInfo(up.timezone)
+            #
+            return datetime.fromtimestamp(tm, tz).strftime('%Y-%m-%d %H:%M')
+        #
+        ctime = str_date(self._meta_data.get(self._meta_data.KEY_CREATION_TIME))
+        mtime = str_date(self._meta_data.get(self._meta_data.KEY_MODIFIED_TIME))
+        user = self._meta_data.get(self._meta_data.KEY_MODIFIED_USER)
+        #
+        meta = f'|{_("Created")}:|{ctime}|\n'
+        meta += f'|{_("Modified")}:|{mtime}|\n'
+        meta += f'|{_("Editor")}|{user}|\n\n'
+        #
+        return mycreole.render_simple(meta)
 
     def render_text(self, request, txt):
         macros = {

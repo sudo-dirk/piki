@@ -113,6 +113,8 @@ def actionbar(context, request, caller_name, **kwargs):
             add_edit_menu(request, bar, kwargs["rel_path"])
         if access.modify_attachment(request, kwargs["rel_path"]):
             add_manageupload_menu(request, bar, kwargs['upload_path'])
+        if access.read_page(request, kwargs["rel_path"]):
+            add_meta_menu(request, bar, kwargs["rel_path"])
     elif caller_name == 'helpview':
         actionbar_add_help(context, request, **kwargs)
     finalise_bar(request, bar)
@@ -138,6 +140,27 @@ def add_manageupload_menu(request, bar, upload_path):
         True,                                                               # left
         False,                                                              # active
     )
+
+
+def add_meta_menu(request, bar, rel_path):
+    if "meta" in request.GET:
+        bar.append_entry(
+            EDIT_UID,                                       # uid
+            _('Page'),                                      # name
+            color_icon_url(request, 'display.png'),         # icon
+            pages.url_page(request, rel_path),              # url
+            True,                                           # left
+            False                                           # active
+        )
+    else:
+        bar.append_entry(
+            EDIT_UID,                                       # uid
+            _('Meta'),                                      # name
+            color_icon_url(request, 'info.png'),            # icon
+            pages.url_page(request, rel_path, meta=None),   # url
+            True,                                           # left
+            False                                           # active
+        )
 
 
 def finalise_bar(request, bar):
