@@ -99,7 +99,7 @@ def add_index_menu(request, bar, rel_path):
     bar.append_entry(
         INDEX_UID,                                  # uid
         _('Index'),                                 # name
-        color_icon_url(request, 'info.png'),        # icon
+        color_icon_url(request, 'edit.png'),        # icon
         pages.url_page(request, 'index'),           # url
         True,                                       # left
         request.path == "/page/index"               # active
@@ -122,7 +122,7 @@ def add_edit_menu(request, bar, rel_path):
     bar.append_entry(
         EDIT_UID,                                   # uid
         _('Edit'),                                  # name
-        color_icon_url(request, 'edit.png'),        # icon
+        color_icon_url(request, 'edit2.png'),       # icon
         pages.url_edit(request, rel_path),          # url
         True,                                       # left
         False                                       # active
