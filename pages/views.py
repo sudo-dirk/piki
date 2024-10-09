@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib import messages as django_messages
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
 from django.utils.translation import gettext as _
@@ -107,7 +108,7 @@ def search(request):
 
     sr = whoosh_search(search_txt)
     if sr is None:
-        messages.error(request, _('Invalid search pattern: %s') % repr(search_txt))
+        django_messages.error(request, _('Invalid search pattern: %s') % repr(search_txt))
         sr = []
     page_content = "= Searchresults\n"
     for rel_path in sr:

@@ -1,4 +1,6 @@
+from datetime import datetime
 from django.urls.base import reverse
+import zoneinfo
 
 
 def url_page(request, rel_path, **kwargs):
@@ -18,3 +20,12 @@ def url_edit(request, rel_path):
 
 def get_search_query(request):
     return request.GET.get('q')
+
+
+def timestamp_to_datetime(request, tm):
+    from users.models import get_userprofile
+    #
+    up = get_userprofile(request.user)
+    tz = zoneinfo.ZoneInfo(up.timezone)
+    #
+    return datetime.fromtimestamp(tm, tz)

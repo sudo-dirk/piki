@@ -1,9 +1,10 @@
+from datetime import datetime
 from django.conf import settings
 
 import fstools
 import logging
 import os
-from whoosh.fields import Schema, ID, TEXT
+from whoosh.fields import Schema, ID, TEXT, DATETIME
 from whoosh.qparser.dateparse import DateParserPlugin
 from whoosh import index, qparser
 
@@ -16,7 +17,11 @@ SCHEMA = Schema(
     id=ID(unique=True, stored=True),
     # Page
     title=TEXT,
-    page_src=TEXT
+    page_src=TEXT,
+    # metadata
+    creation_time=DATETIME,
+    modified_time=DATETIME,
+    modified_user=TEXT
 )
 
 
@@ -55,8 +60,13 @@ def add_item(ix, bp: base_page):
     #
     data = dict(
         id=bp.rel_path,
+        #
         title=bp.title,
-        page_src=bp.raw_page_src
+        page_src=bp.raw_page_src,
+        #
+        creation_time=datetime.fromtimestamp(bp._meta_data.get(bp._meta_data.KEY_CREATION_TIME)),
+        modified_time=datetime.fromtimestamp(bp._meta_data.get(bp._meta_data.KEY_MODIFIED_TIME)),
+        modified_user=bp._meta_data.get(bp._meta_data.KEY_MODIFIED_USER)
     )
     with ix.writer() as w:
         logger.info('Adding document with id=%s to the search index.', data.get('id'))
@@ -93,4 +103,3 @@ def update_item(bp: base_page):
     ix = load_index()
     delete_item(ix, bp)
     add_item(ix, bp)
-

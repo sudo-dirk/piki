@@ -1,4 +1,3 @@
-from datetime import datetime
 from django.conf import settings
 from django.utils.translation import gettext as _
 import fstools
@@ -9,8 +8,7 @@ import mycreole
 import os
 import shutil
 import time
-from users.models import get_userprofile
-import zoneinfo
+from . import timestamp_to_datetime
 
 logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
 
@@ -167,14 +165,8 @@ class creole_page(base_page):
             return ""
 
     def render_meta(self):
-        def str_date(tm):
-            up = get_userprofile(self._request.user)
-            tz = zoneinfo.ZoneInfo(up.timezone)
-            #
-            return datetime.fromtimestamp(tm, tz).strftime('%Y-%m-%d %H:%M')
-        #
-        ctime = str_date(self._meta_data.get(self._meta_data.KEY_CREATION_TIME))
-        mtime = str_date(self._meta_data.get(self._meta_data.KEY_MODIFIED_TIME))
+        ctime = timestamp_to_datetime(self._meta_data.get(self._meta_data.KEY_CREATION_TIME)).strftime('%Y-%m-%d %H:%M')
+        mtime = timestamp_to_datetime(self._meta_data.get(self._meta_data.KEY_MODIFIED_TIME)).strftime('%Y-%m-%d %H:%M')
         user = self._meta_data.get(self._meta_data.KEY_MODIFIED_USER)
         #
         meta = f'|{_("Created")}:|{ctime}|\n'
