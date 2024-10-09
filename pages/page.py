@@ -1,17 +1,55 @@
 from django.conf import settings
 
 import fstools
+import json
 import logging
 from pages import messages, url_page
 import mycreole
 import os
+import time
 
 logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
 
 
+class meta_data(dict):
+    KEY_CREATION_TIME = "creation_time"
+    KEY_MODIFIED_TIME = "modified_time"
+    KEY_MODIFIED_USER = "modified_user"
+
+    def __init__(self, meta_filename, page_exists):
+        self._meta_filename = meta_filename
+
+        # Load data from disk
+        try:
+            with open(meta_filename, 'r') as fh:
+                super().__init__(json.load(fh))
+        except (FileNotFoundError, json.decoder.JSONDecodeError) as e:
+            super().__init__()
+
+        # Add missing information to meta_data
+        missing_keys = False
+        if self.KEY_CREATION_TIME not in self:
+            missing_keys = True
+            self[self.KEY_CREATION_TIME] = int(time.time())
+        if self.KEY_MODIFIED_TIME not in self:
+            self[self.KEY_MODIFIED_TIME] = self[self.KEY_CREATION_TIME]
+        if missing_keys and page_exists:
+            self.save()
+
+    def update(self, username):
+        self[self.KEY_MODIFIED_TIME] = int(time.time())
+        self[self.KEY_MODIFIED_USER] = username
+        #
+        self.save()
+
+    def save(self):
+        with open(self._meta_filename, 'w') as fh:
+            json.dump(self, fh, indent=4)
+
+
 class base_page(object):
-    FOLDER_CONTENT = 'content'
-    FILE_NAME = 'page'
+    PAGE_FILE_NAME = 'page'
+    META_FILE_NAME = 'meta.json'
     SPLITCHAR = ":"
 
     def __init__(self, path):
@@ -20,6 +58,8 @@ class base_page(object):
         else:
             self._path = os.path.join(settings.PAGES_ROOT, path.replace("/", 2*self.SPLITCHAR))
         self._raw_page_src = None
+        #
+        self._meta_data = meta_data(self._meta_filename, self.is_available())
 
     def _load_page_src(self):
         if self._raw_page_src is None:
@@ -38,10 +78,16 @@ class base_page(object):
         with open(self.filename, 'w') as fh:
             fh.write(page_txt)
         update_item(self)
+        #
+        self._update_metadata()
 
     @property
     def filename(self):
-        return os.path.join(self._path, self.FOLDER_CONTENT, self.FILE_NAME)
+        return os.path.join(self._path, self.PAGE_FILE_NAME)
+
+    @property
+    def _meta_filename(self):
+        return os.path.join(self._path, self.META_FILE_NAME)
 
     @property
     def rel_path(self):
@@ -64,6 +110,17 @@ class base_page(object):
     def raw_page_src(self):
         self._load_page_src()
         return self._raw_page_src
+
+    def _update_metadata(self):
+        username = None
+        try:
+            if self._request.user.is_authenticated:
+                username = self._request.user.username
+            else:
+                logger.warning("Page edit without having a logged in user. This is not recommended. Check your access definitions!")
+        except AttributeError:
+            logger.exception("Page edit without having a request object. Check programming!")
+        self._meta_data.update(username)
 
 
 class creole_page(base_page):
