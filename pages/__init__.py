@@ -25,7 +25,11 @@ def get_search_query(request):
 def timestamp_to_datetime(request, tm):
     from users.models import get_userprofile
     #
-    up = get_userprofile(request.user)
-    tz = zoneinfo.ZoneInfo(up.timezone)
-    #
-    return datetime.fromtimestamp(tm, tz)
+    try:
+        up = get_userprofile(request.user)
+    except AttributeError:
+        return datetime.fromtimestamp(tm)
+    else:
+        tz = zoneinfo.ZoneInfo(up.timezone)
+        #
+        return datetime.fromtimestamp(tm, tz)

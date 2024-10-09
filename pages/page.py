@@ -165,8 +165,8 @@ class creole_page(base_page):
             return ""
 
     def render_meta(self):
-        ctime = timestamp_to_datetime(self._meta_data.get(self._meta_data.KEY_CREATION_TIME)).strftime('%Y-%m-%d %H:%M')
-        mtime = timestamp_to_datetime(self._meta_data.get(self._meta_data.KEY_MODIFIED_TIME)).strftime('%Y-%m-%d %H:%M')
+        ctime = timestamp_to_datetime(self._request, self._meta_data.get(self._meta_data.KEY_CREATION_TIME)).strftime('%Y-%m-%d %H:%M')
+        mtime = timestamp_to_datetime(self._request, self._meta_data.get(self._meta_data.KEY_MODIFIED_TIME)).strftime('%Y-%m-%d %H:%M')
         user = self._meta_data.get(self._meta_data.KEY_MODIFIED_USER)
         #
         meta = f'|{_("Created")}:|{ctime}|\n'
