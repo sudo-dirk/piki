@@ -65,9 +65,8 @@ Now there are two ways to finalise your configuration. The first way is for a te
 ## Backup
 ### Create Backup files
     source venv/bin/activate
-    python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e sessions -e auth.Permission -e sessions -e patt --indent 2 > dump_base.json
-    python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e sessions -e auth.Permission -e sessions piki --indent 2 > dump_piki.json
-    tar -cvzf dump_data.tgz data/media data/pages
+    python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e sessions -e auth.Permission -e sessions -e pages --indent 2 > dump_pages.json
+    tar -cvzf dump_data.tgz data/media data/pages data/media
 
 ### Restore Backup
 
@@ -79,6 +78,6 @@ If you are starting without a database, you need to create one
 
 Afterward add data step by step to the database.
 
-    python manage.py loaddata dump_base.json
-    python manage.py loaddata dump_patt.json
+    python manage.py loaddata dump_pages.json
+    rm -rf data/pages data/media
     tar -xvzf dump_data.tgz

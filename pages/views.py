@@ -8,12 +8,14 @@ import logging
 from . import access
 from . import messages
 from . import url_page
+from . import get_search_query
 import config
 from .context import context_adaption
 from .forms import EditForm
 from .help import help_pages
 import mycreole
-from .page import creol_page
+from .page import creole_page
+from .search import whoosh_search
 from themes import Context
 
 logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
@@ -26,7 +28,7 @@ def root(request):
 def page(request, rel_path):
     context = Context(request)      # needs to be executed first because of time mesurement
     #
-    p = creol_page(request, rel_path)
+    p = creole_page(request, rel_path)
     if access.read_page(request, rel_path):
         page_content = p.render_to_html()
     else:
@@ -48,7 +50,7 @@ def edit(request, rel_path):
     if access.write_page(request, rel_path):
         context = Context(request)      # needs to be executed first because of time mesurement
         #
-        p = creol_page(request, rel_path)
+        p = creole_page(request, rel_path)
         #
         if not request.POST:
             form = EditForm(page_data=p.raw_page_src)
@@ -92,10 +94,22 @@ def edit(request, rel_path):
 
 def search(request):
     context = Context(request)      # needs to be executed first because of time mesurement
+    #
+    search_txt = get_search_query(request)
+
+    sr = whoosh_search(search_txt)
+    if sr is None:
+        messages.error(request, _('Invalid search pattern: %s') % repr(search_txt))
+        sr = []
+    page_content = "= Searchresults\n"
+    for rel_path in sr:
+        p = creole_page(request, rel_path)
+        page_content += f"[[/page/{rel_path}|{p.title}]]\n"
+    #
     context_adaption(
         context,
         request,
-        page_content="Search is not yet implemented..."
+        page_content=mycreole.render_simple(page_content)
     )
     return render(request, 'pages/page.html', context=context)
 

@@ -11,3 +11,7 @@ def url_helpview(request, page):
 
 def url_edit(request, rel_path):
     return reverse('page-edit', kwargs={'rel_path': rel_path})
+
+
+def get_search_query(request):
+    return request.GET.get('q')

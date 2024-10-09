@@ -1,69 +1,87 @@
 from django.conf import settings
 
 import fstools
+import logging
 from pages import messages, url_page
 import mycreole
 import os
 
+logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
 
-class creol_page(object):
-    SPLITCHAR = ":"
-    FOLDER_ATTACHMENTS = "attachments"
+
+class base_page(object):
     FOLDER_CONTENT = 'content'
     FILE_NAME = 'page'
+    SPLITCHAR = ":"
 
-    def __init__(self, request, rel_path) -> None:
-        self._rel_path = rel_path
-        self._request = request
+    def __init__(self, path):
+        if path.startswith(settings.PAGES_ROOT):
+            self._path = path
+        else:
+            self._path = os.path.join(settings.PAGES_ROOT, path.replace("/", 2*self.SPLITCHAR))
+        self._raw_page_src = None
+
+    def _load_page_src(self):
+        if self._raw_page_src is None:
+            try:
+                with open(self.filename, 'r') as fh:
+                    self._raw_page_src = fh.read()
+            except FileNotFoundError:
+                self._raw_page_src = ""
+
+    def update_page(self, page_txt):
+        from .search import update_item
+        #
+        folder = os.path.dirname(self.filename)
+        if not os.path.exists(folder):
+            fstools.mkdir(folder)
+        with open(self.filename, 'w') as fh:
+            fh.write(page_txt)
+        update_item(self)
+
+    @property
+    def filename(self):
+        return os.path.join(self._path, self.FOLDER_CONTENT, self.FILE_NAME)
+
+    @property
+    def rel_path(self):
+        return os.path.basename(self._path).replace(2*self.SPLITCHAR, "/")
 
     def rel_path_is_valid(self):
-        return not self.SPLITCHAR in self._rel_path
+        return not self.SPLITCHAR in self.rel_path
 
     def is_available(self):
-        return os.path.isfile(self.content_file_name)
+        is_a = os.path.isfile(self.filename)
+        if not is_a:
+            logger.info("page.is_available: Not available - %s", self.filename)
+        return is_a
 
     @property
     def title(self):
-        return os.path.basename(self._rel_path)
-
-    @property
-    def attachment_path(self):
-        return os.path.join(self.content_folder_name, self.FOLDER_ATTACHMENTS)
-
-    def __content_folder_filter__(self, folder):
-        return folder.replace('/', '::')
-
-    def __folder_content_filter__(self, folder):
-        return folder.replace('::', '/')
-
-    @property
-    def content_folder_name(self):
-        return self.__content_folder_filter__(self._rel_path)
-
-    @property
-    def content_file_name(self):
-        return os.path.join(settings.PAGES_ROOT, self.content_folder_name, self.FOLDER_CONTENT, self.FILE_NAME)
+        return os.path.basename(self._path).split("::")[-1]
 
     @property
     def raw_page_src(self):
-        try:
-            with open(self.content_file_name, 'r') as fh:
-                return fh.read()
-        except FileNotFoundError:
-            return ""
+        self._load_page_src()
+        return self._raw_page_src
 
-    def update_page(self, page_txt):
-        folder = os.path.dirname(self.content_file_name)
-        if not os.path.exists(folder):
-            fstools.mkdir(folder)
-        with open(self.content_file_name, 'w') as fh:
-            fh.write(page_txt)
+
+class creole_page(base_page):
+    FOLDER_ATTACHMENTS = "attachments"
+
+    def __init__(self, request, path) -> None:
+        self._request = request
+        super().__init__(path)
+
+    @property
+    def attachment_path(self):
+        return os.path.join(os.path.basename(self._path), self.FOLDER_ATTACHMENTS)
 
     def render_to_html(self):
         if self.is_available():
             return self.render_text(self._request, self.raw_page_src)
         else:
-            messages.unavailable_msg_page(self._request, self._rel_path)
+            messages.unavailable_msg_page(self._request, self.rel_path)
             return ""
 
     def render_text(self, request, txt):
@@ -102,18 +120,18 @@ class creol_page(object):
         #
         rv = ""
         # create a rel_path list
-        pathlist = [self.__folder_content_filter__(os.path.basename(path)) for path in fstools.dirlist(settings.PAGES_ROOT, rekursive=False)]
+        pathlist = [base_page(path).rel_path for path in fstools.dirlist(settings.PAGES_ROOT, rekursive=False)]
         # sort basename
         pathlist.sort(key=os.path.basename)
 
         last_char = None
         for contentname in pathlist:
             #
-            if (contentname.startswith(self._rel_path) or allpages) and contentname != self._rel_path:
+            if (contentname.startswith(self.rel_path) or allpages) and contentname != self.rel_path:
                 if allpages:
                     name = contentname
                 else:
-                    name = contentname[len(self._rel_path)+1:]
+                    name = contentname[len(self.rel_path)+1:]
                 if name.count('/') < depth and name.startswith(startname):
                     if last_char != os.path.basename(name)[0].upper():
                         last_char = os.path.basename(name)[0].upper()

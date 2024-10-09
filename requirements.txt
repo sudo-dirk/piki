@@ -2,4 +2,4 @@ Django
 Pillow
 python-creole
 pytz
-
+Whoosh

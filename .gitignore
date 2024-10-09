@@ -2,6 +2,7 @@
 data/media
 data/pages
 data/static
+data/whoosh
 db.sqlite3
 config.py
 
@@ -156,4 +157,3 @@ pip-selfcheck.json
 
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
-
