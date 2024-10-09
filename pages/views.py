@@ -75,7 +75,10 @@ def edit(request, rel_path):
             preview = request.POST.get("preview")
             #
             if save is not None:
-                p.update_page(page_txt)
+                if p.update_page(page_txt):
+                    messages.edit_success(request)
+                else:
+                    messages.edit_no_change(request)
                 return HttpResponseRedirect(url_page(request, rel_path))
             elif preview is not None:
                 form = EditForm(page_data=page_txt)

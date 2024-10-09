@@ -7,6 +7,7 @@ import logging
 from pages import messages, url_page
 import mycreole
 import os
+import shutil
 import time
 from users.models import get_userprofile
 import zoneinfo
@@ -53,6 +54,7 @@ class meta_data(dict):
 class base_page(object):
     PAGE_FILE_NAME = 'page'
     META_FILE_NAME = 'meta.json'
+    HISTORY_FOLDER_NAME = 'history'
     SPLITCHAR = ":"
 
     def __init__(self, path):
@@ -72,17 +74,37 @@ class base_page(object):
             except FileNotFoundError:
                 self._raw_page_src = ""
 
+    def _store_history(self):
+        history_folder = os.path.join(self._path, self.HISTORY_FOLDER_NAME)
+        # create folder if needed
+        fstools.mkdir(history_folder)
+        # identify last_history number
+        flist = fstools.filelist(history_folder)
+        flist.sort()
+        if flist:
+            hist_number = int(os.path.basename(flist[-1])[:5]) + 1
+        else:
+            hist_number = 1
+        # copy file to history folder
+        shutil.copy(self.filename, os.path.join(history_folder, "%05d_%s" % (hist_number, self.PAGE_FILE_NAME)))
+        shutil.copy(self._meta_filename, os.path.join(history_folder, "%05d_%s" % (hist_number, self.META_FILE_NAME)))
+
     def update_page(self, page_txt):
         from .search import update_item
-        #
-        folder = os.path.dirname(self.filename)
-        if not os.path.exists(folder):
-            fstools.mkdir(folder)
-        with open(self.filename, 'w') as fh:
-            fh.write(page_txt)
-        update_item(self)
-        #
-        self._update_metadata()
+        if page_txt.replace("\r\n", "\n") != self.raw_page_src:
+            # Store page history
+            if self.raw_page_src:
+                self._store_history()
+            # save the new page content
+            fstools.mkdir(os.path.dirname(self.filename))
+            with open(self.filename, 'w') as fh:
+                fh.write(page_txt)
+            # update search index
+            update_item(self)
+            # update metadata
+            self._update_metadata()
+            return True
+        return False
 
     @property
     def filename(self):
