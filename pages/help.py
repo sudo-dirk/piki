@@ -31,7 +31,9 @@ CREOLE += mycreole.render_simple("""
 """)
 
 ACCESS = mycreole.render_simple(_("""
-= TBD
+= Access
+* Currently just two specific users have write access.
+* Pages containing "private" in the relative page path have no public read access.
 """))
 
 SEARCH = mycreole.render_simple(_(
