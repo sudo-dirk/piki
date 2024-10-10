@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 
 import config
+from logging.handlers import SocketHandler as _SocketHandler
 import os
 import random
 import stat
@@ -182,12 +183,22 @@ if SECRET_KEY is None:
 # Logging Configuration
 #
 ROOT_LOGGER_NAME = 'apps'
+default_handler = ['socket'] if DEBUG else ['console']
+
+
+class DjangoSocketHandler(_SocketHandler):
+    def emit(self, record):
+        if hasattr(record, 'request'):
+            record.request = None
+        return super().emit(record)
+
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
         'short': {
-            'format': "%(name)25s - %(levelname)10s - %(message)s",
+            'format': "%(asctime)s \"%(name)s - %(levelname)s - %(message)s\"",
             'datefmt': '[%d/%b/%Y %H:%M:%S]',
         },
         'long': {
@@ -203,15 +214,21 @@ File "%(pathname)s", line %(lineno)d, in %(funcName)s
             'class': 'logging.StreamHandler',
             'formatter': 'short',
         },
+        'socket': {
+            'level': 'DEBUG',
+            'class': 'piki.settings.DjangoSocketHandler',
+            'host': '127.0.0.1',
+            'port': 19996,
+        },
     },
     'loggers': {
         'django': {
-            'handlers': ['console'],
+            'handlers': default_handler,
             'level': 'INFO',
             'propagate': False,
         },
         ROOT_LOGGER_NAME: {
-            'handlers': ['console'],
+            'handlers': default_handler,
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
