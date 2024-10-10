@@ -182,7 +182,7 @@ if SECRET_KEY is None:
 
 # Logging Configuration
 #
-ROOT_LOGGER_NAME = 'apps'
+ROOT_LOGGER_NAME = os.path.basename(os.path.dirname(__file__))
 default_handler = ['socket'] if DEBUG else ['console']
 
 
@@ -216,7 +216,7 @@ File "%(pathname)s", line %(lineno)d, in %(funcName)s
         },
         'socket': {
             'level': 'DEBUG',
-            'class': 'piki.settings.DjangoSocketHandler',
+            'class': f'{ROOT_LOGGER_NAME}.settings.DjangoSocketHandler',
             'host': '127.0.0.1',
             'port': 19996,
         },
