@@ -12,6 +12,9 @@ MAIN = mycreole.render_simple(_(
 
 **piki** is a minimal wiki implemented with python and django.
 
+== Get it
+For download and installation instructions, visit [[https://git.mount-mockery.de/application/piki]].
+
 == Help
 * [[creole|Creole Markup Language]]
 * [[access|Access Control for the site content]]
@@ -79,11 +82,37 @@ This search pattern can also be combined with other search text via logical oper
 * [[/search/?q=modified_time%3A%5B-5d+to+now%5D| modified_time:[-5d to now] ]] results in a list of all pages which have been modified within the last 5 days.
 """))
 
+BACKUP = mycreole.render_simple(_(
+    """
+= Backup
+With the following command, you create a backup of your piki. It contains out of two files. {{{pages.json}}} \
+includes userdata, bottombar configurations and so on. The pages are included in {{{pages.tgz}}}.
+{{{
+$ cd <PROJECT_DIRECTORY>
+$ source venv/bin/activate
+$ python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e sessions -e auth.Permission -e sessions -e pages --indent 2 > pages.json
+$ tar -czf pages.tgz data/pages data/media
+}}}
+
+= Recovery
+Be carefull with these commands. They delete all the data, before recovering from the backup files!
+{{{
+$ cd <PROJECT_DIRECTORY>
+$ source venv/bin/activate
+$ rm db.sqlite3
+$ rm -rf data/pages data/media
+$ python manage.py migrate
+$ python manage.py loaddata pages.json
+$ tar -xvzf pages.tgz
+}}}
+"""))
+
 help_pages = {
     'main': MAIN,
     'creole': CREOLE,
     'access': ACCESS,
     'search': SEARCH,
+    'backup': BACKUP
 }
 
 
@@ -93,6 +122,7 @@ def actionbar(context, request, current_help_page=None, **kwargs):
         ('2', 'Creole'),
         ('3', 'Access'),
         ('4', 'Search'),
+        ('5', 'Backup'),
     )
     for num, name in actionbar_entries:
         context[context.ACTIONBAR].append_entry(
