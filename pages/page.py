@@ -171,7 +171,9 @@ class creole_page(base_page):
         #
         meta = f'|{_("Created")}:|{ctime}|\n'
         meta += f'|{_("Modified")}:|{mtime}|\n'
-        meta += f'|{_("Editor")}|{user}|\n\n'
+        meta += f'|{_("Editor")}|{user}|\n'
+        meta += f'=== {_("Page content")}\n'
+        meta += '{{{\n%s\n}}}\n' % self.raw_page_src
         #
         return mycreole.render_simple(meta)
 
