@@ -59,7 +59,7 @@ def edit(request, rel_path):
         p = creole_page(request, rel_path)
         #
         if not request.POST:
-            form = EditForm(page_data=p.raw_page_src)
+            form = EditForm(page_data=p.raw_page_src, page_tags=p.page_tags)
             #
             context_adaption(
                 context,
@@ -73,10 +73,11 @@ def edit(request, rel_path):
         else:
             save = request.POST.get("save")
             page_txt = request.POST.get("page_txt")
+            tags = request.POST.get("page_tags")
             preview = request.POST.get("preview")
             #
             if save is not None:
-                if p.update_page(page_txt):
+                if p.update_page(page_txt, tags):
                     messages.edit_success(request)
                 else:
                     messages.edit_no_change(request)

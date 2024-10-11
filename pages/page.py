@@ -17,6 +17,7 @@ class meta_data(dict):
     KEY_CREATION_TIME = "creation_time"
     KEY_MODIFIED_TIME = "modified_time"
     KEY_MODIFIED_USER = "modified_user"
+    KEY_TAGS = "tags"
 
     def __init__(self, meta_filename, page_exists):
         self._meta_filename = meta_filename
@@ -38,11 +39,15 @@ class meta_data(dict):
         if missing_keys and page_exists:
             self.save()
 
-    def update(self, username):
-        self[self.KEY_MODIFIED_TIME] = int(time.time())
-        self[self.KEY_MODIFIED_USER] = username
+    def update(self, username, tags):
+        if username:
+            self[self.KEY_MODIFIED_TIME] = int(time.time())
+            self[self.KEY_MODIFIED_USER] = username
+        if tags:
+            self[self.KEY_TAGS] = tags
         #
-        self.save()
+        if username or tags:
+            self.save()
 
     def save(self):
         with open(self._meta_filename, 'w') as fh:
@@ -87,7 +92,7 @@ class base_page(object):
         shutil.copy(self.filename, os.path.join(history_folder, "%05d_%s" % (hist_number, self.PAGE_FILE_NAME)))
         shutil.copy(self._meta_filename, os.path.join(history_folder, "%05d_%s" % (hist_number, self.META_FILE_NAME)))
 
-    def update_page(self, page_txt):
+    def update_page(self, page_txt, tags):
         from .search import update_item
         if page_txt.replace("\r\n", "\n") != self.raw_page_src:
             # Store page history
@@ -97,12 +102,14 @@ class base_page(object):
             fstools.mkdir(os.path.dirname(self.filename))
             with open(self.filename, 'w') as fh:
                 fh.write(page_txt)
-            # update search index
-            update_item(self)
             # update metadata
-            self._update_metadata()
-            return True
-        return False
+            page_changed = True
+        else:
+            page_changed = False
+        self._update_metadata(tags)
+        # update search index
+        update_item(self)
+        return page_changed
 
     @property
     def filename(self):
@@ -134,7 +141,7 @@ class base_page(object):
         self._load_page_src()
         return self._raw_page_src
 
-    def _update_metadata(self):
+    def _update_metadata(self, tags):
         username = None
         try:
             if self._request.user.is_authenticated:
@@ -143,7 +150,11 @@ class base_page(object):
                 logger.warning("Page edit without having a logged in user. This is not recommended. Check your access definitions!")
         except AttributeError:
             logger.exception("Page edit without having a request object. Check programming!")
-        self._meta_data.update(username)
+        self._meta_data.update(username, tags)
+
+    @property
+    def page_tags(self):
+        return self._meta_data.get(self._meta_data.KEY_TAGS)
 
 
 class creole_page(base_page):
@@ -168,10 +179,12 @@ class creole_page(base_page):
         ctime = timestamp_to_datetime(self._request, self._meta_data.get(self._meta_data.KEY_CREATION_TIME)).strftime('%Y-%m-%d %H:%M')
         mtime = timestamp_to_datetime(self._request, self._meta_data.get(self._meta_data.KEY_MODIFIED_TIME)).strftime('%Y-%m-%d %H:%M')
         user = self._meta_data.get(self._meta_data.KEY_MODIFIED_USER)
+        tags = self._meta_data.get(self._meta_data.KEY_TAGS, "-")
         #
         meta = f'|{_("Created")}:|{ctime}|\n'
         meta += f'|{_("Modified")}:|{mtime}|\n'
         meta += f'|{_("Editor")}|{user}|\n'
+        meta += f'|{_("Tags")}|{tags}|\n'
         meta += f'=== {_("Page content")}\n'
         meta += '{{{\n%s\n}}}\n' % self.raw_page_src
         #
