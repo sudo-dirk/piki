@@ -197,39 +197,57 @@ class creole_page(base_page):
                 pass
 
         params = kwargs.get('', '')
-        startname = ''
+        filter_str = ''
         depth = parse_depth(params)
         if depth is None:
             params = params.split(",")
             depth = parse_depth(params[0])
             if len(params) == 2:
-                startname = params[1]
+                filter_str = params[1]
             elif depth is None:
-                startname = params[0]
-            if depth is None:
-                depth = 9999
+                filter_str = params[0]
         #
         rv = ""
-        # create a rel_path list
-        pathlist = [base_page(path).rel_path for path in fstools.dirlist(settings.PAGES_ROOT, rekursive=False)]
-        # sort basename
-        pathlist.sort(key=os.path.basename)
+        # create a page_list
+        if allpages:
+            expression = "*"
+            parent_rel_path = ""
+        else:
+            expression = os.path.basename(self._path) + 2 * self.SPLITCHAR + "*"
+            parent_rel_path = self.rel_path
+        pl = page_list(
+            self._request,
+            [creole_page(self._request, path) for path in fstools.dirlist(settings.PAGES_ROOT, expression=expression, rekursive=False)]
+        )
+        return pl.html_list(depth=depth, filter_str=filter_str, parent_rel_path=parent_rel_path)
 
+
+class page_list(list):
+    def __init__(self, request, *args, **kwargs):
+        self._request = request
+        return super().__init__(*args, **kwargs)
+
+    def sort_basename(self):
+        return list.sort(self, key=lambda x: os.path.basename(x.rel_path))
+
+    def creole_list(self, depth=None, filter_str='', parent_rel_path=''):
+        self.sort_basename()
+        depth = depth or 9999   # set a random high value if None
+        #
+        parent_rel_path = parent_rel_path + "/" if len(parent_rel_path) > 0 else ""
+        #
+        rv = ""
         last_char = None
-        for contentname in pathlist:
-            #
-            if (contentname.startswith(self.rel_path) or allpages) and contentname != self.rel_path:
-                if allpages:
-                    name = contentname
-                else:
-                    name = contentname[len(self.rel_path)+1:]
-                if name.count('/') < depth and name.startswith(startname):
-                    if last_char != os.path.basename(name)[0].upper():
-                        last_char = os.path.basename(name)[0].upper()
-                        if last_char is not None:
-                            rv += "</ul>\n"
-                        rv += f'<h3>{last_char}</h3>\n<ul>\n'
-                    rv += f'  <li><a href="{url_page(self._request, contentname)}">{name}</a></li>\n'
-        if len(rv) > 0:
-            rv += "</ul>\n"
+        for page in self:
+            name = page.rel_path[len(parent_rel_path):]
+            if name.startswith(filter_str) and name != filter_str:
+                if name.count('/') < depth:
+                    first_char = os.path.basename(name)[0].upper()
+                    if last_char != first_char:
+                        last_char = first_char
+                        rv += f"=== {first_char}\n"
+                    rv += f"* [[{url_page(self._request, page.rel_path)} | {name} ]]\n"
         return rv
+
+    def html_list(self, depth=9999, filter_str='', parent_rel_path=''):
+        return mycreole.render_simple(self.creole_list(depth, filter_str, parent_rel_path))

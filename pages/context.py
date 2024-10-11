@@ -54,6 +54,28 @@ def navigationbar(context, request, caller_name, **kwargs):
     finalise_bar(request, bar)
 
 
+def menubar(context, request, caller_name, **kwargs):
+    bar = context[context.MENUBAR]
+    menubar_users(bar, request)
+    add_help_menu(request, bar, "current_help_page" in kwargs)
+    add_index_menu(request, bar, kwargs.get("rel_path", ''))
+    finalise_bar(request, bar)
+
+
+def actionbar(context, request, caller_name, **kwargs):
+    bar = context[context.ACTIONBAR]
+    if caller_name == 'page':
+        if access.write_page(request, kwargs["rel_path"]):
+            add_edit_menu(request, bar, kwargs["rel_path"])
+        if access.modify_attachment(request, kwargs["rel_path"]):
+            add_manageupload_menu(request, bar, kwargs['upload_path'])
+        if access.read_page(request, kwargs["rel_path"]):
+            add_meta_menu(request, bar, kwargs["rel_path"])
+    elif caller_name == 'helpview':
+        actionbar_add_help(context, request, **kwargs)
+    finalise_bar(request, bar)
+
+
 def add_back_menu(request, bar):
     bar.append_entry(
         BACK_UID,                                   # uid
@@ -76,14 +98,6 @@ def navigation_entry_parameters(request, path):
     )
 
 
-def menubar(context, request, caller_name, **kwargs):
-    bar = context[context.MENUBAR]
-    menubar_users(bar, request)
-    add_help_menu(request, bar, "current_help_page" in kwargs)
-    add_index_menu(request, bar, kwargs.get("rel_path", ''))
-    finalise_bar(request, bar)
-
-
 def add_help_menu(request, bar, active):
     bar.append_entry(
         HELP_UID,                                   # uid
@@ -104,20 +118,6 @@ def add_index_menu(request, bar, rel_path):
         True,                                       # left
         request.path == "/page/index"               # active
     )
-
-
-def actionbar(context, request, caller_name, **kwargs):
-    bar = context[context.ACTIONBAR]
-    if caller_name == 'page':
-        if access.write_page(request, kwargs["rel_path"]):
-            add_edit_menu(request, bar, kwargs["rel_path"])
-        if access.modify_attachment(request, kwargs["rel_path"]):
-            add_manageupload_menu(request, bar, kwargs['upload_path'])
-        if access.read_page(request, kwargs["rel_path"]):
-            add_meta_menu(request, bar, kwargs["rel_path"])
-    elif caller_name == 'helpview':
-        actionbar_add_help(context, request, **kwargs)
-    finalise_bar(request, bar)
 
 
 def add_edit_menu(request, bar, rel_path):

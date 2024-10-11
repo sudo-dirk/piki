@@ -176,14 +176,14 @@ for property_name in USER_CONFIG_DEFAULTS:
 if SECRET_KEY is None:
     chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
     s_key = ''.join([random.choice(chars) for n in range(50)])
-    secret_key_warning = "You need to create a config.py file including at least a SECRET_KEY definition (e.g.: --> %s <--).    " % repr(s_key)
+    secret_key_warning = "You need to create a config.py file including at least a SECRET_KEY definition (e.g.: --> %s <--)." % repr(s_key)
     raise KeyError(secret_key_warning)
 
 
 # Logging Configuration
 #
 ROOT_LOGGER_NAME = os.path.basename(os.path.dirname(__file__))
-default_handler = ['socket'] if DEBUG else ['console']
+default_handler = ['socket', 'console'] if DEBUG else ['console']
 
 
 class DjangoSocketHandler(_SocketHandler):

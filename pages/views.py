@@ -15,7 +15,7 @@ from .context import context_adaption
 from .forms import EditForm
 from .help import help_pages
 import mycreole
-from .page import creole_page
+from .page import creole_page, page_list
 from .search import whoosh_search
 from themes import Context
 
@@ -110,15 +110,13 @@ def search(request):
     if sr is None:
         django_messages.error(request, _('Invalid search pattern: %s') % repr(search_txt))
         sr = []
-    page_content = "= Searchresults\n"
-    for rel_path in sr:
-        p = creole_page(request, rel_path)
-        page_content += f"[[/page/{rel_path}|{p.title}]]\n"
+    pl = page_list(request, [creole_page(request, rel_path) for rel_path in sr])
     #
     context_adaption(
         context,
         request,
-        page_content=mycreole.render_simple(page_content)
+        title=_("Searchresults"),
+        page_content=mycreole.render_simple(pl.creole_list())
     )
     return render(request, 'pages/page.html', context=context)
 
