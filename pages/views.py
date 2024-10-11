@@ -110,7 +110,7 @@ def search(request):
     if sr is None:
         django_messages.error(request, _('Invalid search pattern: %s') % repr(search_txt))
         sr = []
-    pl = page_list(request, [creole_page(request, rel_path) for rel_path in sr])
+    pl = page_list(request, [creole_page(request, rel_path) for rel_path in set(sr)])
     #
     context_adaption(
         context,
