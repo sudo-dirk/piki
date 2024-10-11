@@ -18,7 +18,7 @@ SCHEMA = Schema(
     # Page
     title=TEXT,
     page_src=TEXT,
-    page_tags=TEXT,
+    tag=TEXT,
     # metadata
     creation_time=DATETIME,
     modified_time=DATETIME,
@@ -64,7 +64,7 @@ def add_item(ix, bp: base_page):
         #
         title=bp.title,
         page_src=bp.raw_page_src,
-        page_tags=bp.page_tags,
+        tag=bp.page_tags,
         #
         creation_time=datetime.fromtimestamp(bp._meta_data.get(bp._meta_data.KEY_CREATION_TIME)),
         modified_time=datetime.fromtimestamp(bp._meta_data.get(bp._meta_data.KEY_MODIFIED_TIME)),
@@ -79,7 +79,7 @@ def add_item(ix, bp: base_page):
 
 def whoosh_search(search_txt):
     ix = load_index()
-    qp = qparser.MultifieldParser(['title', 'page_src', 'page_tags'], ix.schema)
+    qp = qparser.MultifieldParser(['title', 'page_src', 'tag'], ix.schema)
     qp.add_plugin(DateParserPlugin(free=True))
     try:
         q = qp.parse(search_txt)

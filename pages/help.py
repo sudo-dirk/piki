@@ -42,12 +42,13 @@ ACCESS = mycreole.render_simple(_("""
 SEARCH = mycreole.render_simple(_(
     """
 = Search
-The search looks up full words in //title (page basename)// and //page_src (the creole source)// without giving \
-special search commands in the search string.
+The search looks up full words in //title (page basename)//, //page_src (the creole source)// and //tag (page tags)// \
+without giving special search commands in the search string.
 
 === Search fields
 * title (TEXT)
 * page_src (TEXT)
+* tag (TEXT)
 * creation_time (DATETIME)
 * modified_time (DATETIME)
 * modified_user (TEXT)
@@ -80,6 +81,7 @@ This search pattern can also be combined with other search text via logical oper
 == Examples
 * [[/search/?q=modified_user:system-page|modified_user:system-page]] results in a list of all system pages.
 * [[/search/?q=modified_time%3A%5B-5d+to+now%5D| modified_time:[-5d to now] ]] results in a list of all pages which have been modified within the last 5 days.
+* [[/search/?q=tag%3Afoo| tag:foo ]] results in a list of all pages which are tagged with //foo//.
 """))
 
 BACKUP = mycreole.render_simple(_(
