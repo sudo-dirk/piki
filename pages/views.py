@@ -30,13 +30,18 @@ def page(request, rel_path):
     context = Context(request)      # needs to be executed first because of time mesurement
     #
     meta = "meta" in request.GET
+    history = request.GET.get("history")
+    if history:
+        history = int(history)
     #
-    p = creole_page(request, rel_path)
+    p = creole_page(request, rel_path, history_version=history)
     if access.read_page(request, rel_path):
         if meta:
             page_content = p.render_meta()
         else:
             page_content = p.render_to_html()
+        if history:
+            messages.history_version_display(request, rel_path, history)
     else:
         messages.permission_denied_msg_page(request, rel_path)
         page_content = ""
@@ -56,9 +61,13 @@ def edit(request, rel_path):
     if access.write_page(request, rel_path):
         context = Context(request)      # needs to be executed first because of time mesurement
         #
-        p = creole_page(request, rel_path)
-        #
         if not request.POST:
+            history = request.GET.get("history")
+            if history:
+                history = int(history)
+            #
+            p = creole_page(request, rel_path, history_version=history)
+            #
             form = EditForm(page_data=p.raw_page_src, page_tags=p.page_tags)
             #
             context_adaption(
@@ -71,6 +80,8 @@ def edit(request, rel_path):
             )
             return render(request, 'pages/page_form.html', context=context)
         else:
+            p = creole_page(request, rel_path)
+            #
             save = request.POST.get("save")
             page_txt = request.POST.get("page_txt")
             tags = request.POST.get("page_tags")

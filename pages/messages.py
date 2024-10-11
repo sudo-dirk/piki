@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.utils.translation import gettext as _
+import pages
 
 
 def permission_denied_msg_page(request, rel_path):
@@ -20,3 +21,11 @@ def edit_success(request):
 def edit_no_change(request):
     # TODO: Add translation for this message
     messages.info(request, _("Nothing changed, no storage needed."))
+
+
+def history_version_display(request, rel_path, history_version):
+    # TODO: Add translation for this message
+    messages.warning(request, _("You see an old version of the page (Version = %d). Click <a href='%s'>here</a> to recover this Version.") % (
+        history_version,
+        pages.url_edit(request, rel_path, history=history_version)
+    ))

@@ -60,7 +60,9 @@ class base_page(object):
     HISTORY_FOLDER_NAME = 'history'
     SPLITCHAR = ":"
 
-    def __init__(self, path):
+    def __init__(self, path, history_version=None):
+        self._history_version = history_version
+        #
         if path.startswith(settings.PAGES_ROOT):
             self._path = path
         else:
@@ -68,6 +70,10 @@ class base_page(object):
         self._raw_page_src = None
         #
         self._meta_data = meta_data(self._meta_filename, self.is_available())
+
+    @property
+    def modified_time(self):
+        return self._meta_data.get(self._meta_data.KEY_MODIFIED_TIME)
 
     def _load_page_src(self):
         if self._raw_page_src is None:
@@ -77,47 +83,63 @@ class base_page(object):
             except FileNotFoundError:
                 self._raw_page_src = ""
 
-    def _store_history(self):
+    def history_numbers_list(self):
         history_folder = os.path.join(self._path, self.HISTORY_FOLDER_NAME)
-        # create folder if needed
         fstools.mkdir(history_folder)
         # identify last_history number
-        flist = fstools.filelist(history_folder)
-        flist.sort()
-        if flist:
-            hist_number = int(os.path.basename(flist[-1])[:5]) + 1
-        else:
-            hist_number = 1
+        return list(set([int(os.path.basename(filename)[:5]) for filename in fstools.filelist(history_folder)]))
+
+    def _store_history(self):
+        try:
+            hist_number = max(self.history_numbers_list()) + 1
+        except ValueError:
+            hist_number = 1     # no history yet
         # copy file to history folder
-        shutil.copy(self.filename, os.path.join(history_folder, "%05d_%s" % (hist_number, self.PAGE_FILE_NAME)))
-        shutil.copy(self._meta_filename, os.path.join(history_folder, "%05d_%s" % (hist_number, self.META_FILE_NAME)))
+        shutil.copy(self.filename, self.history_filename(hist_number))
+        shutil.copy(self._meta_filename, self._history_meta_filename(hist_number))
 
     def update_page(self, page_txt, tags):
-        from .search import update_item
-        if page_txt.replace("\r\n", "\n") != self.raw_page_src:
-            # Store page history
-            if self.raw_page_src:
-                self._store_history()
-            # save the new page content
-            fstools.mkdir(os.path.dirname(self.filename))
-            with open(self.filename, 'w') as fh:
-                fh.write(page_txt)
-            # update metadata
-            page_changed = True
+        if self._history_version:
+            logger.error("A history version %05d can not be updated!", self._history_version)
+            return False
         else:
-            page_changed = False
-        self._update_metadata(tags)
-        # update search index
-        update_item(self)
-        return page_changed
+            from .search import update_item
+            if page_txt.replace("\r\n", "\n") != self.raw_page_src:
+                # Store page history
+                if self.raw_page_src:
+                    self._store_history()
+                # save the new page content
+                fstools.mkdir(os.path.dirname(self.filename))
+                with open(self.filename, 'w') as fh:
+                    fh.write(page_txt)
+                # update metadata
+                page_changed = True
+            else:
+                page_changed = False
+            self._update_metadata(tags)
+            # update search index
+            update_item(self)
+            return page_changed
 
     @property
     def filename(self):
-        return os.path.join(self._path, self.PAGE_FILE_NAME)
+        if not self._history_version:
+            return os.path.join(self._path, self.PAGE_FILE_NAME)
+        else:
+            return self.history_filename(self._history_version)
+
+    def history_filename(self, history_version):
+        return os.path.join(self._path, self.HISTORY_FOLDER_NAME, "%05d_%s" % (history_version, self.PAGE_FILE_NAME))
 
     @property
     def _meta_filename(self):
-        return os.path.join(self._path, self.META_FILE_NAME)
+        if not self._history_version:
+            return os.path.join(self._path, self.META_FILE_NAME)
+        else:
+            return self._history_meta_filename(self._history_version)
+
+    def _history_meta_filename(self, history_version):
+        return os.path.join(self._path, self.HISTORY_FOLDER_NAME, "%05d_%s" % (history_version, self.META_FILE_NAME))
 
     @property
     def rel_path(self):
@@ -160,9 +182,9 @@ class base_page(object):
 class creole_page(base_page):
     FOLDER_ATTACHMENTS = "attachments"
 
-    def __init__(self, request, path) -> None:
+    def __init__(self, request, path, history_version=None) -> None:
         self._request = request
-        super().__init__(path)
+        super().__init__(path, history_version=history_version)
 
     @property
     def attachment_path(self):
@@ -181,12 +203,51 @@ class creole_page(base_page):
         user = self._meta_data.get(self._meta_data.KEY_MODIFIED_USER)
         tags = self._meta_data.get(self._meta_data.KEY_TAGS, "-")
         #
-        meta = f'|{_("Created")}:|{ctime}|\n'
+        meta = f'=== {_("Meta data")}\n'
+        meta += f'|{_("Created")}:|{ctime}|\n'
         meta += f'|{_("Modified")}:|{mtime}|\n'
         meta += f'|{_("Editor")}|{user}|\n'
         meta += f'|{_("Tags")}|{tags}|\n'
+        #
+        hnl = self.history_numbers_list()
+        if hnl:
+            meta += f'=== {_("History")}\n'
+            meta += f'| ={_("Version")} | ={_("Date")} | ={_("Page")} | ={_("Meta data")} | \n'
+            # Current
+            name = _("Current")
+            meta += f"| {name} \
+                      | {timestamp_to_datetime(self._request, self.modified_time)} \
+                      | [[{url_page(self._request, self.rel_path)} | Page]] \
+                      | [[{url_page(self._request, self.rel_path, meta=None)} | Meta]]\n"
+            # History
+            for num in reversed(hnl):
+                p = creole_page(self._request, self._path, history_version=num)
+                meta += f"| {num} \
+                          | {timestamp_to_datetime(self._request, p.modified_time)} \
+                          | [[{url_page(self._request, p.rel_path, history=num)} | Page]] \
+                          | [[{url_page(self._request, p.rel_path, meta=None, history=num)} | Meta]]\n"
+        #
         meta += f'=== {_("Page content")}\n'
-        meta += '{{{\n%s\n}}}\n' % self.raw_page_src
+        if not self._history_version:
+            meta += '{{{\n%s\n}}}\n' % self.raw_page_src
+        else:
+            c = creole_page(self._request, self.rel_path)
+            meta += "| =Current | =This |\n"
+            left_lines = c.raw_page_src.splitlines()
+            right_lines = self.raw_page_src.splitlines()
+            while len(left_lines) + len(right_lines) > 0:
+                try:
+                    left = left_lines.pop(0)
+                except IndexError:
+                    left = ""
+                try:
+                    right = right_lines.pop(0)
+                except IndexError:
+                    right = ""
+                if left == right:
+                    meta += "| {{{ %s }}} | {{{ %s }}} |\n" % (left, right)
+                else:
+                    meta += "| **{{{ %s }}}** | **{{{ %s }}}** |\n" % (left, right)
         #
         return mycreole.render_simple(meta)
 
