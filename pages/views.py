@@ -94,7 +94,7 @@ def edit(request, rel_path):
                     messages.edit_no_change(request)
                 return HttpResponseRedirect(url_page(request, rel_path))
             elif preview is not None:
-                form = EditForm(page_data=page_txt)
+                form = EditForm(page_data=page_txt, page_tags=tags)
                 #
                 context_adaption(
                     context,
