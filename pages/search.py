@@ -8,7 +8,7 @@ from whoosh.fields import Schema, ID, TEXT, DATETIME
 from whoosh.qparser.dateparse import DateParserPlugin
 from whoosh import index, qparser
 
-from pages.page import page_wrapped
+from pages.page import page_wrapped, full_path_all_pages
 
 logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
 
@@ -38,7 +38,7 @@ def create_index():
 
 
 def rebuild_index(ix):
-    page_path = fstools.dirlist(settings.PAGES_ROOT, rekursive=False)
+    page_path = full_path_all_pages()
     for path in page_path:
         pw = page_wrapped(None, path)
         add_item(ix, pw)
