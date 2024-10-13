@@ -54,17 +54,25 @@ class meta_data(dict):
     def history_filename(self, history_version):
         return os.path.join(self._path, HISTORY_FOLDER_NAME, "%05d_%s" % (history_version, self.META_FILE_NAME))
 
+    def update_required(self, tags):
+        return tags != self.get(self.KEY_TAGS)
+
     def update(self, username, tags):
-        if username:
-            self[self.KEY_MODIFIED_TIME] = int(time.time())
-            self[self.KEY_MODIFIED_USER] = username
-            if self.KEY_CREATION_TIME not in self:
-                self[self.KEY_CREATION_TIME] = self[self.KEY_MODIFIED_TIME]
-        if tags:
-            self[self.KEY_TAGS] = tags
-        #
-        if username or tags:
-            self.save()
+        if self._history_version:
+            logger.error("A history version %05d can not be updated!", self._history_version)
+            return False
+        else:
+            if username:
+                self[self.KEY_MODIFIED_TIME] = int(time.time())
+                self[self.KEY_MODIFIED_USER] = username
+                if self.KEY_CREATION_TIME not in self:
+                    self[self.KEY_CREATION_TIME] = self[self.KEY_MODIFIED_TIME]
+            if tags:
+                self[self.KEY_TAGS] = tags
+            #
+            if username or tags:
+                self.save()
+            return True
 
     def save(self):
         if self._history_version:
@@ -421,21 +429,23 @@ class page_wrapped(object):
         return rv
 
     def update_page(self, txt, tags):
-        if self._page.update_required(txt):
+        if self._page.update_required(txt) or self._page_meta.update_required(tags):
+            rv = False
             # Store history
             self.__store_history__()
-            # Update page
-            rv = self._page.update_page(txt)
-            # Update meta data
             username = None
-            try:
-                if self._request.user.is_authenticated:
-                    username = self._request.user.username
-                else:
-                    logger.warning("Page edit without having a logged in user. This is not recommended. Check your access definitions!")
-            except AttributeError:
-                logger.exception("Page edit without having a request object. Check programming!")
-            self._page_meta.update(username, tags)
+            if self._page.update_required(txt):
+                # Update page
+                rv |= self._page.update_page(txt)
+                # Identify username, to update meta
+                try:
+                    if self._request.user.is_authenticated:
+                        username = self._request.user.username
+                    else:
+                        logger.warning("Page edit without having a logged in user. This is not recommended. Check your access definitions!")
+                except AttributeError:
+                    logger.exception("Page edit without having a request object. Check programming!")
+            rv |= self._page_meta.update(username, tags)
             # Update search index
             from pages.search import update_item
             update_item(self)
