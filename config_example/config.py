@@ -16,7 +16,7 @@ USERS_SELF_REGISTRATION = False
 # Themes library
 #
 # This defines the default theme, if no theme is set in the django parameters
-DEFAULT_THEME = 'clear-blue'
+DEFAULT_THEME = 'clear-teal'
 
 #
 # Django
