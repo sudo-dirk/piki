@@ -72,7 +72,7 @@ def add_item(ix, pw: page_wrapped):
     )
     with ix.writer() as w:
         logger.info('Adding document with id=%s to the search index.', data.get('id'))
-        w.add_document(**data)
+        w.update_document(**data)
         for key in data:
             logger.debug('  - Adding %s=%s', key, repr(data[key]))
 

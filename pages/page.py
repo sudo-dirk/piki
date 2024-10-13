@@ -129,7 +129,7 @@ class page_data(object):
     def is_available(self):
         is_a = os.path.isfile(self.filename)
         if not is_a:
-            logger.info("page.is_available: Not available - %s", self.filename)
+            logger.debug("page.is_available: Not available - %s", self.filename)
         return is_a
 
     @property
