@@ -1,3 +1,4 @@
+import difflib
 from django.conf import settings
 from django.utils.translation import gettext as _
 import fstools
@@ -13,36 +14,52 @@ from . import timestamp_to_datetime
 logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
 
 
+SPLITCHAR = ":"
+HISTORY_FOLDER_NAME = 'history'
+
+
+def full_path_all_pages(expression="*"):
+    system_pages = fstools.dirlist(settings.SYSTEM_PAGES_ROOT, expression=expression, rekursive=False)
+    system_pages = [os.path.join(settings.PAGES_ROOT, os.path.basename(path)) for path in system_pages]
+    pages = fstools.dirlist(settings.PAGES_ROOT, expression=expression, rekursive=False)
+    return list(set(system_pages + pages))
+
+
 class meta_data(dict):
+    META_FILE_NAME = 'meta.json'
+    #
     KEY_CREATION_TIME = "creation_time"
     KEY_MODIFIED_TIME = "modified_time"
     KEY_MODIFIED_USER = "modified_user"
     KEY_TAGS = "tags"
 
-    def __init__(self, meta_filename, page_exists):
-        self._meta_filename = meta_filename
-
+    def __init__(self, path, history_version=None):
+        self._path = path
+        self._history_version = history_version
+        #
         # Load data from disk
         try:
-            with open(meta_filename, 'r') as fh:
+            with open(self.filename, 'r') as fh:
                 super().__init__(json.load(fh))
         except (FileNotFoundError, json.decoder.JSONDecodeError) as e:
             super().__init__()
 
-        # Add missing information to meta_data
-        missing_keys = False
-        if self.KEY_CREATION_TIME not in self:
-            missing_keys = True
-            self[self.KEY_CREATION_TIME] = int(time.time())
-        if self.KEY_MODIFIED_TIME not in self:
-            self[self.KEY_MODIFIED_TIME] = self[self.KEY_CREATION_TIME]
-        if missing_keys and page_exists:
-            self.save()
+    @property
+    def filename(self):
+        if not self._history_version:
+            return os.path.join(self._path, self.META_FILE_NAME)
+        else:
+            return self.history_filename(self._history_version)
+
+    def history_filename(self, history_version):
+        return os.path.join(self._path, HISTORY_FOLDER_NAME, "%05d_%s" % (history_version, self.META_FILE_NAME))
 
     def update(self, username, tags):
         if username:
             self[self.KEY_MODIFIED_TIME] = int(time.time())
             self[self.KEY_MODIFIED_USER] = username
+            if self.KEY_CREATION_TIME not in self:
+                self[self.KEY_CREATION_TIME] = self[self.KEY_MODIFIED_TIME]
         if tags:
             self[self.KEY_TAGS] = tags
         #
@@ -50,30 +67,27 @@ class meta_data(dict):
             self.save()
 
     def save(self):
-        with open(self._meta_filename, 'w') as fh:
-            json.dump(self, fh, indent=4)
+        if self._history_version:
+            logger.error("A history version %05d can not be updated!", self._history_version)
+            return False
+        else:
+            with open(self.filename, 'w') as fh:
+                json.dump(self, fh, indent=4)
+            return True
+
+    def store_to_history(self, history_number):
+        history_filename = self.history_filename(history_number)
+        fstools.mkdir(os.path.dirname(history_filename))
+        shutil.copy(self.filename, history_filename)
 
 
-class base_page(object):
+class page_data(object):
     PAGE_FILE_NAME = 'page'
-    META_FILE_NAME = 'meta.json'
-    HISTORY_FOLDER_NAME = 'history'
-    SPLITCHAR = ":"
 
     def __init__(self, path, history_version=None):
         self._history_version = history_version
-        #
-        if path.startswith(settings.PAGES_ROOT):
-            self._path = path
-        else:
-            self._path = os.path.join(settings.PAGES_ROOT, path.replace("/", 2*self.SPLITCHAR))
+        self._path = path
         self._raw_page_src = None
-        #
-        self._meta_data = meta_data(self._meta_filename, self.is_available())
-
-    @property
-    def modified_time(self):
-        return self._meta_data.get(self._meta_data.KEY_MODIFIED_TIME)
 
     def _load_page_src(self):
         if self._raw_page_src is None:
@@ -83,43 +97,20 @@ class base_page(object):
             except FileNotFoundError:
                 self._raw_page_src = ""
 
-    def history_numbers_list(self):
-        history_folder = os.path.join(self._path, self.HISTORY_FOLDER_NAME)
-        fstools.mkdir(history_folder)
-        # identify last_history number
-        return list(set([int(os.path.basename(filename)[:5]) for filename in fstools.filelist(history_folder)]))
+    def update_required(self, page_txt):
+        return page_txt.replace("\r\n", "\n") != self.raw_page_src
 
-    def _store_history(self):
-        try:
-            hist_number = max(self.history_numbers_list()) + 1
-        except ValueError:
-            hist_number = 1     # no history yet
-        # copy file to history folder
-        shutil.copy(self.filename, self.history_filename(hist_number))
-        shutil.copy(self._meta_filename, self._history_meta_filename(hist_number))
-
-    def update_page(self, page_txt, tags):
+    def update_page(self, page_txt):
         if self._history_version:
             logger.error("A history version %05d can not be updated!", self._history_version)
             return False
         else:
-            from .search import update_item
-            if page_txt.replace("\r\n", "\n") != self.raw_page_src:
-                # Store page history
-                if self.raw_page_src:
-                    self._store_history()
-                # save the new page content
-                fstools.mkdir(os.path.dirname(self.filename))
-                with open(self.filename, 'w') as fh:
-                    fh.write(page_txt)
-                # update metadata
-                page_changed = True
-            else:
-                page_changed = False
-            self._update_metadata(tags)
-            # update search index
-            update_item(self)
-            return page_changed
+            # save the new page content
+            fstools.mkdir(os.path.dirname(self.filename))
+            with open(self.filename, 'w') as fh:
+                fh.write(page_txt)
+            self._raw_page_src = page_txt
+            return True
 
     @property
     def filename(self):
@@ -129,24 +120,11 @@ class base_page(object):
             return self.history_filename(self._history_version)
 
     def history_filename(self, history_version):
-        return os.path.join(self._path, self.HISTORY_FOLDER_NAME, "%05d_%s" % (history_version, self.PAGE_FILE_NAME))
-
-    @property
-    def _meta_filename(self):
-        if not self._history_version:
-            return os.path.join(self._path, self.META_FILE_NAME)
-        else:
-            return self._history_meta_filename(self._history_version)
-
-    def _history_meta_filename(self, history_version):
-        return os.path.join(self._path, self.HISTORY_FOLDER_NAME, "%05d_%s" % (history_version, self.META_FILE_NAME))
+        return os.path.join(self._path, HISTORY_FOLDER_NAME, "%05d_%s" % (history_version, self.PAGE_FILE_NAME))
 
     @property
     def rel_path(self):
-        return os.path.basename(self._path).replace(2*self.SPLITCHAR, "/")
-
-    def rel_path_is_valid(self):
-        return not self.SPLITCHAR in self.rel_path
+        return os.path.basename(self._path).replace(2*SPLITCHAR, "/")
 
     def is_available(self):
         is_a = os.path.isfile(self.filename)
@@ -163,23 +141,13 @@ class base_page(object):
         self._load_page_src()
         return self._raw_page_src
 
-    def _update_metadata(self, tags):
-        username = None
-        try:
-            if self._request.user.is_authenticated:
-                username = self._request.user.username
-            else:
-                logger.warning("Page edit without having a logged in user. This is not recommended. Check your access definitions!")
-        except AttributeError:
-            logger.exception("Page edit without having a request object. Check programming!")
-        self._meta_data.update(username, tags)
-
-    @property
-    def page_tags(self):
-        return self._meta_data.get(self._meta_data.KEY_TAGS)
+    def store_to_history(self, history_number):
+        history_filename = self.history_filename(history_number)
+        fstools.mkdir(os.path.dirname(history_filename))
+        shutil.copy(self.filename, history_filename)
 
 
-class creole_page(base_page):
+class page_django(page_data):
     FOLDER_ATTACHMENTS = "attachments"
 
     def __init__(self, request, path, history_version=None) -> None:
@@ -197,17 +165,21 @@ class creole_page(base_page):
             messages.unavailable_msg_page(self._request, self.rel_path)
             return ""
 
-    def render_meta(self):
-        ctime = timestamp_to_datetime(self._request, self._meta_data.get(self._meta_data.KEY_CREATION_TIME)).strftime('%Y-%m-%d %H:%M')
-        mtime = timestamp_to_datetime(self._request, self._meta_data.get(self._meta_data.KEY_MODIFIED_TIME)).strftime('%Y-%m-%d %H:%M')
-        user = self._meta_data.get(self._meta_data.KEY_MODIFIED_USER)
-        tags = self._meta_data.get(self._meta_data.KEY_TAGS, "-")
+    def history_numbers_list(self):
+        history_folder = os.path.join(self._path, HISTORY_FOLDER_NAME)
+        return list(set([int(os.path.basename(filename)[:5]) for filename in fstools.filelist(history_folder)]))
+
+    def render_meta(self, ctime, mtime, user, tags):
+        #
+        # Page meta data
         #
         meta = f'=== {_("Meta data")}\n'
-        meta += f'|{_("Created")}:|{ctime}|\n'
-        meta += f'|{_("Modified")}:|{mtime}|\n'
+        meta += f'|{_("Created")}:|{timestamp_to_datetime(self._request, ctime)}|\n'
+        meta += f'|{_("Modified")}:|{timestamp_to_datetime(self._request, mtime)}|\n'
         meta += f'|{_("Editor")}|{user}|\n'
         meta += f'|{_("Tags")}|{tags}|\n'
+        #
+        # List of hostory page versions
         #
         hnl = self.history_numbers_list()
         if hnl:
@@ -216,40 +188,27 @@ class creole_page(base_page):
             # Current
             name = _("Current")
             meta += f"| {name} \
-                      | {timestamp_to_datetime(self._request, self.modified_time)} \
+                      | {timestamp_to_datetime(self._request, mtime)} \
                       | [[{url_page(self._request, self.rel_path)} | Page]] \
                       | [[{url_page(self._request, self.rel_path, meta=None)} | Meta]]\n"
             # History
             for num in reversed(hnl):
-                p = creole_page(self._request, self._path, history_version=num)
+                p = page_wrapped(self._request, self._path, history_version=num)
                 meta += f"| {num} \
                           | {timestamp_to_datetime(self._request, p.modified_time)} \
                           | [[{url_page(self._request, p.rel_path, history=num)} | Page]] \
-                          | [[{url_page(self._request, p.rel_path, meta=None, history=num)} | Meta]]\n"
-        #
-        meta += f'=== {_("Page content")}\n'
-        if not self._history_version:
-            meta += '{{{\n%s\n}}}\n' % self.raw_page_src
-        else:
-            c = creole_page(self._request, self.rel_path)
-            meta += "| =Current | =This |\n"
+                          | [[{url_page(self._request, p.rel_path, meta=None, history=num)} | Meta]] (with page changes)\n"
+        # Diff
+        html_diff = ""
+        if self._history_version:
+            meta += f'=== {_("Page differences")}\n'
+            #
+            c = page_django(self._request, self._path)
             left_lines = c.raw_page_src.splitlines()
             right_lines = self.raw_page_src.splitlines()
-            while len(left_lines) + len(right_lines) > 0:
-                try:
-                    left = left_lines.pop(0)
-                except IndexError:
-                    left = ""
-                try:
-                    right = right_lines.pop(0)
-                except IndexError:
-                    right = ""
-                if left == right:
-                    meta += "| {{{ %s }}} | {{{ %s }}} |\n" % (left, right)
-                else:
-                    meta += "| **{{{ %s }}}** | **{{{ %s }}}** |\n" % (left, right)
+            html_diff = difflib.HtmlDiff(wrapcolumn=80).make_table(left_lines, right_lines)
         #
-        return mycreole.render_simple(meta)
+        return mycreole.render_simple(meta) + html_diff
 
     def render_text(self, request, txt):
         macros = {
@@ -289,11 +248,12 @@ class creole_page(base_page):
             expression = "*"
             parent_rel_path = ""
         else:
-            expression = os.path.basename(self._path) + 2 * self.SPLITCHAR + "*"
+            expression = os.path.basename(self._path) + 2 * SPLITCHAR + "*"
             parent_rel_path = self.rel_path
+        #
         pl = page_list(
             self._request,
-            [creole_page(self._request, path) for path in fstools.dirlist(settings.PAGES_ROOT, expression=expression, rekursive=False)]
+            [page_django(self._request, path) for path in full_path_all_pages(expression)]
         )
         return pl.html_list(depth=depth, filter_str=filter_str, parent_rel_path=parent_rel_path)
 
@@ -327,3 +287,151 @@ class page_list(list):
 
     def html_list(self, depth=9999, filter_str='', parent_rel_path=''):
         return mycreole.render_simple(self.creole_list(depth, filter_str, parent_rel_path))
+
+
+class page_wrapped(object):
+    """
+    This class holds different page and meta instances and decides which will be used in which case.
+    """
+
+    def __init__(self, request, path, history_version=None):
+        """_summary_
+
+        Args:
+            request (_type_): The django request or None (if None, the page functionality is limited)
+            path (_type_): A rel_path of the django page or the filesystem path to the page
+            history_version (_type_, optional): The history version of the page to be created
+        """
+        self._request = request
+        #
+        page_path = self.__page_path__(path)
+        system_page_path = self.__system_page_path__(path)
+        # Page
+        if request:
+            self._page = page_django(request, page_path, history_version=history_version)
+        else:
+            self._page = page_data(page_path, history_version=history_version)
+        self._page_meta = meta_data(page_path, history_version=history_version)
+        # System page
+        if request:
+            self._system_page = page_django(request, system_page_path)
+        else:
+            self._system_page = page_data(system_page_path)
+        self._system_meta_data = meta_data(system_page_path)
+
+    def __page_path__(self, path):
+        if path.startswith(settings.PAGES_ROOT):
+            # must be a filesystem path
+            return path
+        else:
+            # must be a relative url
+            return os.path.join(settings.PAGES_ROOT, path.replace("/", 2*SPLITCHAR))
+
+    def __system_page_path__(self, path):
+        return os.path.join(settings.SYSTEM_PAGES_ROOT, os.path.basename(path))
+
+    def __page_choose__(self):
+        if not self._page.is_available():
+            return self._system_page
+        else:
+            return self._page
+
+    def __meta_choose__(self):
+        if not self._page.is_available():
+            return self._system_meta_data
+        else:
+            return self._page_meta
+
+    def __store_history__(self):
+        if self._page.is_available():
+            try:
+                history_number = max(self._page.history_numbers_list()) + 1
+            except ValueError:
+                history_number = 1     # no history yet
+            self._page.store_to_history(history_number)
+            self._page_meta.store_to_history(history_number)
+
+    #
+    # meta_data
+    #
+    @property
+    def creation_time(self):
+        meta = self.__meta_choose__()
+        rv = meta.get(meta.KEY_CREATION_TIME)
+        return rv
+
+    @property
+    def modified_time(self):
+        meta = self.__meta_choose__()
+        rv = meta.get(meta.KEY_MODIFIED_TIME)
+        return rv
+
+    @property
+    def modified_user(self):
+        meta = self.__meta_choose__()
+        rv = meta.get(meta.KEY_MODIFIED_USER)
+        return rv
+
+    @property
+    def tags(self):
+        meta = self.__meta_choose__()
+        rv = meta.get(meta.KEY_TAGS)
+        return rv
+
+    #
+    # page
+    #
+    @property
+    def attachment_path(self):
+        page = self.__page_choose__()
+        rv = page.attachment_path
+        return rv
+
+    @property
+    def raw_page_src(self):
+        page = self.__page_choose__()
+        rv = page.raw_page_src
+        return rv
+
+    @property
+    def rel_path(self):
+        page = self.__page_choose__()
+        rv = page.rel_path
+        return rv
+
+    def render_meta(self):
+        page = self.__page_choose__()
+        rv = page.render_meta(self.creation_time, self.modified_time, self.modified_user, self.tags)
+        return rv
+
+    def render_to_html(self):
+        page = self.__page_choose__()
+        rv = page.render_to_html()
+        return rv
+
+    @property
+    def title(self):
+        page = self.__page_choose__()
+        rv = page.title
+        return rv
+
+    def update_page(self, txt, tags):
+        if self._page.update_required(txt):
+            # Store history
+            self.__store_history__()
+            # Update page
+            rv = self._page.update_page(txt)
+            # Update meta data
+            username = None
+            try:
+                if self._request.user.is_authenticated:
+                    username = self._request.user.username
+                else:
+                    logger.warning("Page edit without having a logged in user. This is not recommended. Check your access definitions!")
+            except AttributeError:
+                logger.exception("Page edit without having a request object. Check programming!")
+            self._page_meta.update(username, tags)
+            # Update search index
+            from pages.search import update_item
+            update_item(self)
+            return rv

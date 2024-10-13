@@ -15,7 +15,7 @@ from .context import context_adaption
 from .forms import EditForm
 from .help import help_pages
 import mycreole
-from .page import creole_page, page_list
+from .page import page_wrapped, page_list
 from .search import whoosh_search
 from themes import Context
 
@@ -34,7 +34,7 @@ def page(request, rel_path):
     if history:
         history = int(history)
     #
-    p = creole_page(request, rel_path, history_version=history)
+    p = page_wrapped(request, rel_path, history_version=history)
     if access.read_page(request, rel_path):
         if meta:
             page_content = p.render_meta()
@@ -66,9 +66,9 @@ def edit(request, rel_path):
             if history:
                 history = int(history)
             #
-            p = creole_page(request, rel_path, history_version=history)
+            p = page_wrapped(request, rel_path, history_version=history)
             #
-            form = EditForm(page_data=p.raw_page_src, page_tags=p.page_tags)
+            form = EditForm(page_data=p.raw_page_src, page_tags=p.tags)
             #
             context_adaption(
                 context,
@@ -80,7 +80,7 @@ def edit(request, rel_path):
             )
             return render(request, 'pages/page_form.html', context=context)
         else:
-            p = creole_page(request, rel_path)
+            p = page_wrapped(request, rel_path)
             #
             save = request.POST.get("save")
             page_txt = request.POST.get("page_txt")
@@ -122,7 +122,7 @@ def search(request):
     if sr is None:
         django_messages.error(request, _('Invalid search pattern: %s') % repr(search_txt))
         sr = []
-    pl = page_list(request, [creole_page(request, rel_path) for rel_path in set(sr)])
+    pl = page_list(request, [page_wrapped(request, rel_path) for rel_path in set(sr)])
     #
     context_adaption(
         context,

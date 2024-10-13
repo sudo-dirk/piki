@@ -134,6 +134,7 @@ MYCREOLE_BAR = {
     'menubar': 'pages.context.menubar',
 }
 
+SYSTEM_PAGES_ROOT = os.path.join(BASE_DIR, 'data', 'system-pages')
 PAGES_ROOT = os.path.join(BASE_DIR, 'data', 'pages')
 
 WHOOSH_PATH = os.path.join(BASE_DIR, 'data', 'whoosh')

@@ -8,7 +8,7 @@ from whoosh.fields import Schema, ID, TEXT, DATETIME
 from whoosh.qparser.dateparse import DateParserPlugin
 from whoosh import index, qparser
 
-from pages.page import base_page
+from pages.page import page_wrapped
 
 logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
 
@@ -40,8 +40,8 @@ def create_index():
 def rebuild_index(ix):
     page_path = fstools.dirlist(settings.PAGES_ROOT, rekursive=False)
     for path in page_path:
-        bp = base_page(path)
-        add_item(ix, bp)
+        pw = page_wrapped(None, path)
+        add_item(ix, pw)
     return len(page_path)
 
 
@@ -56,19 +56,19 @@ def load_index():
     return ix
 
 
-def add_item(ix, bp: base_page):
+def add_item(ix, pw: page_wrapped):
     # Define Standard data
     #
     data = dict(
-        id=bp.rel_path,
+        id=pw.rel_path,
         #
-        title=bp.title,
-        page_src=bp.raw_page_src,
-        tag=bp.page_tags,
+        title=pw.title,
+        page_src=pw.raw_page_src,
+        tag=pw.tags,
         #
-        creation_time=datetime.fromtimestamp(bp._meta_data.get(bp._meta_data.KEY_CREATION_TIME)),
-        modified_time=datetime.fromtimestamp(bp._meta_data.get(bp._meta_data.KEY_MODIFIED_TIME)),
-        modified_user=bp._meta_data.get(bp._meta_data.KEY_MODIFIED_USER)
+        creation_time=datetime.fromtimestamp(pw.creation_time),
+        modified_time=datetime.fromtimestamp(pw.modified_time),
+        modified_user=pw.modified_user
     )
     with ix.writer() as w:
         logger.info('Adding document with id=%s to the search index.', data.get('id'))
@@ -95,13 +95,13 @@ def whoosh_search(search_txt):
         return rpl
 
 
-def delete_item(ix, bp: base_page):
+def delete_item(ix, pw: page_wrapped):
     with ix.writer() as w:
-        logger.info('Removing document with id=%s from the search index.', bp.rel_path)
-        w.delete_by_term("task_id", bp.rel_path)
+        logger.info('Removing document with id=%s from the search index.', pw.rel_path)
+        w.delete_by_term("task_id", pw.rel_path)
 
 
-def update_item(bp: base_page):
+def update_item(pw: page_wrapped):
     ix = load_index()
-    delete_item(ix, bp)
-    add_item(ix, bp)
+    delete_item(ix, pw)
+    add_item(ix, pw)
