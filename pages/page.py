@@ -409,6 +409,11 @@ class page_wrapped(object):
         rv = page.render_to_html()
         return rv
 
+    def render_text(self, request, txt):
+        page = self.__page_choose__()
+        rv = page.render_text(request, txt)
+        return rv
+
     @property
     def title(self):
         page = self.__page_choose__()
