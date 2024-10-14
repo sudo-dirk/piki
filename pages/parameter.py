@@ -11,7 +11,7 @@ def no_access(*args, **kwargs):
 
 
 DEFAULTS = {
-    CMS_MODE: True,
+    CMS_MODE: False,
 }
 
 

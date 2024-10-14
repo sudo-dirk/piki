@@ -4,7 +4,10 @@
 #
 # Piki Setting
 #
+# The root page to be used
 STARTPAGE = "startpage"
+# Activate content management system (view)
+# CMS_MODE = True
 
 #
 # Users library
