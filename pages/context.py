@@ -6,6 +6,7 @@ from django.conf import settings
 from django.utils.translation import gettext as _
 
 from pages import access
+import pages.parameter
 from .help import actionbar as actionbar_add_help
 import mycreole
 import pages
@@ -20,6 +21,11 @@ EDIT_UID = 'edit'
 HELP_UID = 'help'
 INDEX_UID = 'index'
 NAVIGATION_ENTRY_UID = 'navigation-%s'
+
+
+def cms_mode_active(request):
+    user_logged_in = request.user.is_authenticated
+    return pages.parameter.get(pages.parameter.CMS_MODE) and not user_logged_in
 
 
 def context_adaption(context, request, **kwargs):
@@ -56,24 +62,26 @@ def navigationbar(context, request, caller_name, **kwargs):
 
 def menubar(context, request, caller_name, **kwargs):
     bar = context[context.MENUBAR]
-    menubar_users(bar, request)
-    add_help_menu(request, bar, "current_help_page" in kwargs)
+    if not cms_mode_active(request):
+        menubar_users(bar, request)
+        add_help_menu(request, bar, "current_help_page" in kwargs)
     add_index_menu(request, bar, kwargs.get("rel_path", ''))
     finalise_bar(request, bar)
 
 
 def actionbar(context, request, caller_name, **kwargs):
     bar = context[context.ACTIONBAR]
-    if caller_name == 'page':
-        if access.write_page(request, kwargs["rel_path"]):
-            add_edit_menu(request, bar, kwargs["rel_path"])
-        if access.modify_attachment(request, kwargs["rel_path"]):
-            add_manageupload_menu(request, bar, kwargs['upload_path'])
-        if access.read_page(request, kwargs["rel_path"]):
-            add_meta_menu(request, bar, kwargs["rel_path"])
-    elif caller_name == 'helpview':
-        actionbar_add_help(context, request, **kwargs)
-    finalise_bar(request, bar)
+    if not cms_mode_active(request):
+        if caller_name == 'page':
+            if access.write_page(request, kwargs["rel_path"]):
+                add_edit_menu(request, bar, kwargs["rel_path"])
+            if access.modify_attachment(request, kwargs["rel_path"]):
+                add_manageupload_menu(request, bar, kwargs['upload_path'])
+            if access.read_page(request, kwargs["rel_path"]):
+                add_meta_menu(request, bar, kwargs["rel_path"])
+        elif caller_name == 'helpview':
+            actionbar_add_help(context, request, **kwargs)
+        finalise_bar(request, bar)
 
 
 def add_back_menu(request, bar):

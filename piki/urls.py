@@ -20,6 +20,7 @@ from django.contrib import admin
 from django.urls import path, include
 
 import pages.views
+import users
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -37,6 +38,7 @@ urlpatterns = [
     path('mycreole/', include('mycreole.urls')),
     # users
     path('users/', include('users.urls')),
+    path('login/', users.views.login, name='users-login-root'),
 ]
 
 if settings.DEBUG:
