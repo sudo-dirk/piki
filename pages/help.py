@@ -131,7 +131,7 @@ def actionbar(context, request, current_help_page=None, **kwargs):
             HELP_UID + '-%s' % name.lower(),                        # uid
             _(name),                                                # name
             color_icon_url(request, num + '.png'),                  # icon
-            pages.url_helpview(request, name.lower()),              # url
+            pages.url_helpview(name.lower()),                       # url
             True,                                                   # left
             name.lower() == current_help_page,                      # active
         )

@@ -23,7 +23,7 @@ logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
 
 
 def root(request):
-    return HttpResponseRedirect(url_page(request, config.STARTPAGE))
+    return HttpResponseRedirect(url_page(config.STARTPAGE))
 
 
 def page(request, rel_path):
@@ -92,7 +92,7 @@ def edit(request, rel_path):
                     messages.edit_success(request)
                 else:
                     messages.edit_no_change(request)
-                return HttpResponseRedirect(url_page(request, rel_path))
+                return HttpResponseRedirect(url_page(rel_path))
             elif preview is not None:
                 form = EditForm(page_data=page_txt, page_tags=tags)
                 #
@@ -107,10 +107,10 @@ def edit(request, rel_path):
                 )
                 return render(request, 'pages/page_form.html', context=context)
             else:
-                return HttpResponseRedirect(url_page(request, rel_path))
+                return HttpResponseRedirect(url_page(rel_path))
     else:
         messages.permission_denied_msg_page(request, rel_path)
-        return HttpResponseRedirect(url_page(request, rel_path))
+        return HttpResponseRedirect(url_page(rel_path))
 
 
 def search(request):

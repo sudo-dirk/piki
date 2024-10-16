@@ -22,6 +22,7 @@ def full_path_all_pages(expression="*"):
     system_pages = fstools.dirlist(settings.SYSTEM_PAGES_ROOT, expression=expression, rekursive=False)
     system_pages = [os.path.join(settings.PAGES_ROOT, os.path.basename(path)) for path in system_pages]
     pages = fstools.dirlist(settings.PAGES_ROOT, expression=expression, rekursive=False)
+    # TODO: strip path, if page or meta.json is missing
     return list(set(system_pages + pages))
 
 
@@ -197,15 +198,15 @@ class page_django(page_data):
             name = _("Current")
             meta += f"| {name} \
                       | {timestamp_to_datetime(self._request, mtime)} \
-                      | [[{url_page(self._request, self.rel_path)} | Page]] \
-                      | [[{url_page(self._request, self.rel_path, meta=None)} | Meta]]\n"
+                      | [[{url_page(self.rel_path)} | Page]] \
+                      | [[{url_page(self.rel_path, meta=None)} | Meta]]\n"
             # History
             for num in reversed(hnl):
                 p = page_wrapped(self._request, self._path, history_version=num)
                 meta += f"| {num} \
                           | {timestamp_to_datetime(self._request, p.modified_time)} \
-                          | [[{url_page(self._request, p.rel_path, history=num)} | Page]] \
-                          | [[{url_page(self._request, p.rel_path, meta=None, history=num)} | Meta]] (with page changes)\n"
+                          | [[{url_page(p.rel_path, history=num)} | Page]] \
+                          | [[{url_page(p.rel_path, meta=None, history=num)} | Meta]] (with page changes)\n"
         # Diff
         html_diff = ""
         if self._history_version:
@@ -222,6 +223,8 @@ class page_django(page_data):
         macros = {
             "subpages": self.macro_subpages,
             "allpages": self.macro_allpages,
+            "subpagetree": self.macro_subpagetree,
+            "allpagestree": self.macro_allpagestree,
         }
         return mycreole.render(request, txt, self.attachment_path, macros=macros)
 
@@ -231,6 +234,7 @@ class page_django(page_data):
 
     def macro_subpages(self, *args, **kwargs):
         allpages = kwargs.pop("allpages", False)
+        tree = kwargs.pop("tree", False)
         #
 
         def parse_depth(s: str):
@@ -263,7 +267,19 @@ class page_django(page_data):
             self._request,
             [page_django(self._request, path) for path in full_path_all_pages(expression)]
         )
-        return pl.html_list(depth=depth, filter_str=filter_str, parent_rel_path=parent_rel_path)
+        if tree:
+            return page_tree(pl).html()
+        else:
+            return pl.html_list(depth=depth, filter_str=filter_str, parent_rel_path=parent_rel_path)
+
+    def macro_allpagestree(self, *args, **kwargs):
+        kwargs["allpages"] = True
+        kwargs["tree"] = True
+        return self.macro_subpages(*args, **kwargs)
+
+    def macro_subpagetree(self, * args, **kwargs):
+        kwargs["tree"] = True
+        return self.macro_subpages(*args, **kwargs)
 
 
 class page_list(list):
@@ -290,11 +306,48 @@ class page_list(list):
                     if last_char != first_char:
                         last_char = first_char
                         rv += f"=== {first_char}\n"
-                    rv += f"* [[{url_page(self._request, page.rel_path)} | {name} ]]\n"
+                    rv += f"* [[{url_page(page.rel_path)} | {name} ]]\n"
         return rv
 
     def html_list(self, depth=9999, filter_str='', parent_rel_path=''):
         return mycreole.render_simple(self.creole_list(depth, filter_str, parent_rel_path))
+
+
+class page_tree(dict):
+    T_PATTERN = "├── "
+    L_PATTERN = "└── "
+    I_PATTERN = "│   "
+    D_PATTERN = "   &nbsp;&nbsp;&nbsp;"
+
+    def __init__(self, pl: page_list):
+        super().__init__()
+        for page in pl:
+            store_item = self
+            for entry in page.rel_path.split("/"):
+                if not entry in store_item:
+                    store_item[entry] = {}
+                store_item = store_item[entry]
+
+    def html(self, rel_path=None, fill=""):
+        base = self
+        try:
+            for key in rel_path.split("/"):
+                base = base[key]
+        except AttributeError:
+            rel_path = ''
+        #
+        rv = ""
+        #
+        l = len(base)
+        for entry in sorted(list(base.keys())):
+            l -= 1
+            page_path = os.path.join(rel_path, entry)
+            page = page_wrapped(None, page_path)
+            if page.is_available():
+                entry = f'<a href="{url_page(page_path)}">{entry}</a>'
+            rv += fill + (self.L_PATTERN if l == 0 else self.T_PATTERN) + entry + "<br>\n"
+            rv += self.html(page_path, fill=fill+(self.D_PATTERN if l == 0 else self.I_PATTERN))
+        return rv
 
 
 class page_wrapped(object):
@@ -394,6 +447,9 @@ class page_wrapped(object):
         page = self.__page_choose__()
         rv = page.attachment_path
         return rv
+
+    def is_available(self):
+        return self._page.is_available() or self._system_page.is_available()
 
     @property
     def raw_page_src(self):

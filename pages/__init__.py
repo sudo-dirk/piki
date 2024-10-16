@@ -10,15 +10,15 @@ def params(**kwargs):
     return params
 
 
-def url_page(request, rel_path, **kwargs):
+def url_page(rel_path, **kwargs):
     return reverse('page-page', kwargs={'rel_path': rel_path}) + params(**kwargs)
 
 
-def url_helpview(request, page):
+def url_helpview(page):
     return reverse('page-helpview', kwargs={'page': page})
 
 
-def url_edit(request, rel_path, **kwargs):
+def url_edit(rel_path, **kwargs):
     return reverse('page-edit', kwargs={'rel_path': rel_path}) + params(**kwargs)
 
 

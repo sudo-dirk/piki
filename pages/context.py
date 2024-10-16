@@ -20,6 +20,7 @@ BACK_UID = 'back'
 EDIT_UID = 'edit'
 HELP_UID = 'help'
 INDEX_UID = 'index'
+TREE_UID = 'tree'
 NAVIGATION_ENTRY_UID = 'navigation-%s'
 
 
@@ -65,7 +66,7 @@ def menubar(context, request, caller_name, **kwargs):
     if not cms_mode_active(request):
         menubar_users(bar, request)
         add_help_menu(request, bar, "current_help_page" in kwargs)
-    add_index_menu(request, bar, kwargs.get("rel_path", ''))
+    add_nav_links(request, bar, kwargs.get("rel_path", ''))
     finalise_bar(request, bar)
 
 
@@ -100,7 +101,7 @@ def navigation_entry_parameters(request, path):
         NAVIGATION_ENTRY_UID % os.path.basename(path),          # uid
         '/' + os.path.basename(path),                           # name
         None,                                                   # icon
-        pages.url_page(request, path),                          # url
+        pages.url_page(path),                                   # url
         False,                                                  # left
         False                                                   # active
     )
@@ -111,20 +112,28 @@ def add_help_menu(request, bar, active):
         HELP_UID,                                   # uid
         _('Help'),                                  # name
         color_icon_url(request, 'help.png'),        # icon
-        pages.url_helpview(request, 'main'),        # url
+        pages.url_helpview('main'),                 # url
         True,                                       # left
         active                                      # active
     )
 
 
-def add_index_menu(request, bar, rel_path):
+def add_nav_links(request, bar, rel_path):
     bar.append_entry(
         INDEX_UID,                                  # uid
         _('Index'),                                 # name
         color_icon_url(request, 'edit.png'),        # icon
-        pages.url_page(request, 'index'),           # url
+        pages.url_page('index'),                    # url
         True,                                       # left
         request.path == "/page/index"               # active
+    )
+    bar.append_entry(
+        TREE_UID,                                   # uid
+        _('Tree'),                                  # name
+        color_icon_url(request, 'tree.png'),        # icon
+        pages.url_page('tree'),                     # url
+        True,                                       # left
+        request.path == "/page/tree"                # active
     )
 
 
@@ -133,7 +142,7 @@ def add_edit_menu(request, bar, rel_path):
         EDIT_UID,                                   # uid
         _('Edit'),                                  # name
         color_icon_url(request, 'edit2.png'),       # icon
-        pages.url_edit(request, rel_path),          # url
+        pages.url_edit(rel_path),                   # url
         True,                                       # left
         False                                       # active
     )
@@ -156,7 +165,7 @@ def add_meta_menu(request, bar, rel_path):
             EDIT_UID,                                       # uid
             _('Page'),                                      # name
             color_icon_url(request, 'display.png'),         # icon
-            pages.url_page(request, rel_path),              # url
+            pages.url_page(rel_path),                       # url
             True,                                           # left
             False                                           # active
         )
@@ -165,7 +174,7 @@ def add_meta_menu(request, bar, rel_path):
             EDIT_UID,                                       # uid
             _('Meta'),                                      # name
             color_icon_url(request, 'info.png'),            # icon
-            pages.url_page(request, rel_path, meta=None),   # url
+            pages.url_page(rel_path, meta=None),            # url
             True,                                           # left
             False                                           # active
         )
