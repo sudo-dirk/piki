@@ -301,7 +301,7 @@ class page_django(page_data):
             [page_django(self._request, path) for path in full_path_all_pages(expression)]
         )
         if tree:
-            return page_tree(pl).html()
+            return "<pre>\n" + page_tree(pl).html() + "</pre>\n"
         else:
             return pl.html_list(depth=depth, filter_str=filter_str, parent_rel_path=parent_rel_path)
 
@@ -349,8 +349,8 @@ class page_list(list):
 class page_tree(dict):
     T_PATTERN = "├── "
     L_PATTERN = "└── "
-    I_PATTERN = "│   "
-    D_PATTERN = "   &nbsp;&nbsp;&nbsp;"
+    I_PATTERN = "│   "
+    D_PATTERN = "    "
 
     def __init__(self, pl: page_list):
         super().__init__()
@@ -378,7 +378,7 @@ class page_tree(dict):
             page = page_wrapped(None, page_path)
             if page.is_available():
                 entry = f'<a href="{url_page(page_path)}">{entry}</a>'
-            rv += fill + (self.L_PATTERN if l == 0 else self.T_PATTERN) + entry + "<br>\n"
+            rv += fill + (self.L_PATTERN if l == 0 else self.T_PATTERN) + entry + "\n"
             rv += self.html(page_path, fill=fill+(self.D_PATTERN if l == 0 else self.I_PATTERN))
         return rv
 
