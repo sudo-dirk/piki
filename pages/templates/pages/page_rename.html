@@ -1,0 +1,15 @@
+{% extends "themes/"|add:settings.page_theme|add:"/base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+  <form class="form" method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" name="rename" value="{% trans "Rename" %}" class="button" />
+    <input type="submit" name="cancel" value="{% trans "Cancel" %}" class="button" />
+  </form>
+
+  {{ page_content|safe }}
+    
+{% endblock content %}

@@ -30,6 +30,8 @@ urlpatterns = [
     path('page/', pages.views.root, name='page-root'),
     path('page/<path:rel_path>', pages.views.page, name='page-page'),
     path('pageedit/<path:rel_path>/', pages.views.edit, name='page-edit'),
+    path('pagedelete/<path:rel_path>/', pages.views.delete, name='page-delete'),
+    path('pagerename/<path:rel_path>/', pages.views.rename, name='page-rename'),
     path('helpview/', pages.views.helpview, name='page-helpview'),
     path('helpview/<str:page>', pages.views.helpview, name='page-helpview'),
     # theme

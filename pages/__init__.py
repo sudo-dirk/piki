@@ -18,8 +18,16 @@ def url_helpview(page):
     return reverse('page-helpview', kwargs={'page': page})
 
 
+def url_delete(rel_path, **kwargs):
+    return reverse('page-delete', kwargs={'rel_path': rel_path}) + params(**kwargs)
+
+
 def url_edit(rel_path, **kwargs):
     return reverse('page-edit', kwargs={'rel_path': rel_path}) + params(**kwargs)
+
+
+def url_rename(rel_path, **kwargs):
+    return reverse('page-rename', kwargs={'rel_path': rel_path}) + params(**kwargs)
 
 
 def get_search_query(request):

@@ -73,13 +73,13 @@ def menubar(context, request, caller_name, **kwargs):
 def actionbar(context, request, caller_name, **kwargs):
     bar = context[context.ACTIONBAR]
     if not cms_mode_active(request):
-        if caller_name == 'page':
+        if caller_name in ['page', 'edit', 'delete', 'rename']:
             if access.write_page(request, kwargs["rel_path"]):
-                add_edit_menu(request, bar, kwargs["rel_path"])
+                add_page_menu(request, bar, kwargs["rel_path"], kwargs.get('is_available', False))
             if access.modify_attachment(request, kwargs["rel_path"]):
-                add_manageupload_menu(request, bar, kwargs['upload_path'])
+                add_manageupload_menu(request, bar, kwargs['upload_path'], kwargs.get('is_available', False))
             if access.read_page(request, kwargs["rel_path"]):
-                add_meta_menu(request, bar, kwargs["rel_path"])
+                add_meta_menu(request, bar, kwargs["rel_path"], kwargs.get('is_available', False))
         elif caller_name == 'helpview':
             actionbar_add_help(context, request, **kwargs)
         finalise_bar(request, bar)
@@ -137,47 +137,66 @@ def add_nav_links(request, bar, rel_path):
     )
 
 
-def add_edit_menu(request, bar, rel_path):
+def add_page_menu(request, bar, rel_path, is_available):
     bar.append_entry(
         EDIT_UID,                                   # uid
         _('Edit'),                                  # name
         color_icon_url(request, 'edit2.png'),       # icon
         pages.url_edit(rel_path),                   # url
         True,                                       # left
-        False                                       # active
+        request.path == pages.url_edit(rel_path)    # active
     )
-
-
-def add_manageupload_menu(request, bar, upload_path):
-    bar.append_entry(
-        ATTACHMENT_UID,                                                     # uid
-        _("Attachments"),                                                   # name
-        color_icon_url(request, 'upload.png'),                              # icon
-        mycreole.url_manage_uploads(request, upload_path),                  # url
-        True,                                                               # left
-        False,                                                              # active
-    )
-
-
-def add_meta_menu(request, bar, rel_path):
-    if "meta" in request.GET:
+    if is_available:
         bar.append_entry(
-            EDIT_UID,                                       # uid
-            _('Page'),                                      # name
-            color_icon_url(request, 'display.png'),         # icon
-            pages.url_page(rel_path),                       # url
-            True,                                           # left
-            False                                           # active
+            EDIT_UID,                                   # uid
+            _('Rename'),                                # name
+            color_icon_url(request, 'shuffle.png'),     # icon
+            pages.url_rename(rel_path),                 # url
+            True,                                       # left
+            request.path == pages.url_rename(rel_path)  # active
         )
-    else:
         bar.append_entry(
-            EDIT_UID,                                       # uid
-            _('Meta'),                                      # name
-            color_icon_url(request, 'info.png'),            # icon
-            pages.url_page(rel_path, meta=None),            # url
-            True,                                           # left
-            False                                           # active
+            EDIT_UID,                                   # uid
+            _('Delete'),                                # name
+            color_icon_url(request, 'delete.png'),      # icon
+            pages.url_delete(rel_path),                 # url
+            True,                                       # left
+            request.path == pages.url_delete(rel_path)  # active
         )
+
+
+def add_manageupload_menu(request, bar, upload_path, is_available):
+    if is_available:
+        bar.append_entry(
+            ATTACHMENT_UID,                                                     # uid
+            _("Attachments"),                                                   # name
+            color_icon_url(request, 'upload.png'),                              # icon
+            mycreole.url_manage_uploads(request, upload_path),                  # url
+            True,                                                               # left
+            False,                                                              # active
+        )
+
+
+def add_meta_menu(request, bar, rel_path, is_available):
+    if is_available:
+        if "meta" in request.GET:
+            bar.append_entry(
+                EDIT_UID,                                       # uid
+                _('Page'),                                      # name
+                color_icon_url(request, 'display.png'),         # icon
+                pages.url_page(rel_path),                       # url
+                True,                                           # left
+                False                                           # active
+            )
+        else:
+            bar.append_entry(
+                EDIT_UID,                                       # uid
+                _('Meta'),                                      # name
+                color_icon_url(request, 'info.png'),            # icon
+                pages.url_page(rel_path, meta=None),            # url
+                True,                                           # left
+                False                                           # active
+            )
 
 
 def finalise_bar(request, bar):

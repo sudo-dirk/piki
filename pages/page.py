@@ -22,8 +22,24 @@ def full_path_all_pages(expression="*"):
     system_pages = fstools.dirlist(settings.SYSTEM_PAGES_ROOT, expression=expression, rekursive=False)
     system_pages = [os.path.join(settings.PAGES_ROOT, os.path.basename(path)) for path in system_pages]
     pages = fstools.dirlist(settings.PAGES_ROOT, expression=expression, rekursive=False)
-    # TODO: strip path, if page or meta.json is missing
-    return list(set(system_pages + pages))
+    rv = []
+    for path in set(system_pages + pages):
+        p = page_wrapped(None, path)
+        if p.is_available():
+            rv.append(path)
+    return rv
+
+
+def full_path_deleted_pages(expression="*"):
+    system_pages = fstools.dirlist(settings.SYSTEM_PAGES_ROOT, expression=expression, rekursive=False)
+    system_pages = [os.path.join(settings.PAGES_ROOT, os.path.basename(path)) for path in system_pages]
+    pages = fstools.dirlist(settings.PAGES_ROOT, expression=expression, rekursive=False)
+    rv = []
+    for path in set(system_pages + pages):
+        p = page_wrapped(None, path)
+        if not p.is_available():
+            rv.append(path)
+    return rv
 
 
 class meta_data(dict):
@@ -44,6 +60,9 @@ class meta_data(dict):
                 super().__init__(json.load(fh))
         except (FileNotFoundError, json.decoder.JSONDecodeError) as e:
             super().__init__()
+
+    def delete(self):
+        os.remove(self.filename)
 
     @property
     def filename(self):
@@ -106,6 +125,20 @@ class page_data(object):
             except FileNotFoundError:
                 self._raw_page_src = ""
 
+    def delete(self):
+        os.remove(self.filename)
+
+    def rename(self, page_name):
+        # Change backslash to slash and remove double slashes
+        page_name = page_name.replace("\\", "/")
+        while "//" in page_name:
+            page_name = page_name.replace("//", "/")
+        # move path
+        target_path = os.path.join(settings.PAGES_ROOT, page_name.replace("/", 2*SPLITCHAR))
+        shutil.move(self._path, target_path)
+        # set my path
+        self._path = target_path
+
     def update_required(self, page_txt):
         return page_txt.replace("\r\n", "\n") != self.raw_page_src
 
@@ -143,7 +176,7 @@ class page_data(object):
 
     @property
     def title(self):
-        return os.path.basename(self._path).split("::")[-1]
+        return os.path.basename(self._path).split(2*SPLITCHAR)[-1]
 
     @property
     def raw_page_src(self):
@@ -421,6 +454,11 @@ class page_wrapped(object):
         rv = meta.get(meta.KEY_CREATION_TIME)
         return rv
 
+    def delete(self):
+        self.__store_history__()
+        self._page.delete()
+        self._page_meta.delete()
+
     @property
     def modified_time(self):
         meta = self.__meta_choose__()
@@ -432,6 +470,9 @@ class page_wrapped(object):
         meta = self.__meta_choose__()
         rv = meta.get(meta.KEY_MODIFIED_USER)
         return rv
+
+    def rename(self, page_name):
+        self._page.rename(page_name)
 
     @property
     def tags(self):
@@ -450,6 +491,9 @@ class page_wrapped(object):
 
     def is_available(self):
         return self._page.is_available() or self._system_page.is_available()
+
+    def userpage_is_available(self):
+        return self._page.is_available()
 
     @property
     def raw_page_src(self):

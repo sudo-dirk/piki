@@ -18,9 +18,24 @@ def edit_success(request):
     messages.success(request, _('Thanks for editing, page stored.'))
 
 
-def edit_no_change(request):
+def no_change(request):
     # TODO: Add translation for this message
     messages.info(request, _("Nothing changed, no storage needed."))
+
+
+def operation_canceled(request):
+    # TODO: Add translation for this message
+    messages.info(request, _('Operation caneled, no change to the content.'))
+
+
+def page_deleted(request, title):
+    # TODO: Add translation for this message
+    messages.info(request, _('The page "%s" has been deleted.') % title)
+
+
+def page_renamed(request):
+    # TODO: Add translation for this message
+    messages.info(request, _('The page has been renamed.'))
 
 
 def history_version_display(request, rel_path, history_version):

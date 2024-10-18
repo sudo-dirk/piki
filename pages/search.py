@@ -98,7 +98,7 @@ def whoosh_search(search_txt):
 def delete_item(ix, pw: page_wrapped):
     with ix.writer() as w:
         logger.info('Removing document with id=%s from the search index.', pw.rel_path)
-        w.delete_by_term("task_id", pw.rel_path)
+        w.delete_by_term("id", pw.rel_path)
 
 
 def update_item(pw: page_wrapped):
