@@ -1,7 +1,5 @@
-from typing import Any, Mapping
 from django import forms
-from django.forms.renderers import BaseRenderer
-from django.forms.utils import ErrorList
+from django.contrib.auth.models import Group
 
 from .models import PikiPage
 
@@ -15,6 +13,19 @@ class EditForm(forms.ModelForm):
             "owner", "owner_perms_read", "owner_perms_write",
             "group", "group_perms_read", "group_perms_write",
             "other_perms_read", "other_perms_write",]
+
+
+class GroupForm(forms.Form):
+    group = forms.ModelChoiceField(queryset=Group.objects.all(), required=False)
+
+
+class PermForm(forms.Form):
+    owner_perms_read = forms.BooleanField(initial=True, required=False, label="Read (owner)")
+    owner_perms_write = forms.BooleanField(initial=True, required=False, label="Write (owner)")
+    group_perms_read = forms.BooleanField(initial=True, required=False, label="Read (group)")
+    group_perms_write = forms.BooleanField(initial=True, required=False, label="Write (group)")
+    other_perms_read = forms.BooleanField(initial=True, required=False, label="Read (other)")
+    other_perms_write = forms.BooleanField(initial=False, required=False, label="Write (other)")
 
 
 class RenameForm(forms.Form):  # Note that it is not inheriting from forms.ModelForm
