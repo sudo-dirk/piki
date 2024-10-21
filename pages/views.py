@@ -6,7 +6,8 @@ from django.utils.translation import gettext as _
 
 import logging
 
-from . import access
+
+from .access import access_control
 from . import messages
 from . import url_page
 from . import get_search_query
@@ -14,12 +15,23 @@ import config
 from .context import context_adaption
 from .forms import EditForm, RenameForm
 from .help import help_pages
+from .models import PikiPage, page_list
 import mycreole
-from .page import page_wrapped, page_list
-from .search import whoosh_search, load_index, delete_item, add_item
+from .search import whoosh_search, load_index, delete_item, add_item, update_item
 from themes import Context
 
 logger = logging.getLogger(settings.ROOT_LOGGER_NAME).getChild(__name__)
+
+
+SUCCESS_PAGE = _("""= Default startpage
+**Congratulations!!!**
+
+Seeing this page means, that you installed Piki successfull.
+
+Edit this page to get your own first startpage.
+
+If you need need assistance to edit a page, visit the [[/helpview/main|help pages]].
+""")
 
 
 def root(request):
@@ -29,19 +41,36 @@ def root(request):
 def page(request, rel_path):
     context = Context(request)      # needs to be executed first because of time mesurement
     #
+    try:
+        p = PikiPage.objects.get(rel_path=rel_path)
+    except PikiPage.DoesNotExist:
+        p = None
     meta = "meta" in request.GET
     history = request.GET.get("history")
     if history:
         history = int(history)
     #
-    p = page_wrapped(request, rel_path, history_version=history)
-    if access.read_page(request, rel_path):
-        if meta:
-            page_content = p.render_meta()
+    title = rel_path.split("/")[-1]
+    #
+    acc = access_control(request, rel_path)
+    if acc.may_read():
+        if p is None or p.deleted:
+            if rel_path == config.STARTPAGE:
+                page_content = mycreole.render_simple(SUCCESS_PAGE)
+            else:
+                page_content = ""
+            if p is not None and p.deleted:
+                messages.deleted_page(request)
+            else:
+                messages.unavailable_msg_page(request, rel_path)
         else:
-            page_content = p.render_to_html()
-        if history:
-            messages.history_version_display(request, rel_path, history)
+            title = p.title
+            if meta:
+                page_content = p.render_meta(request, history)
+            else:
+                page_content = p.render_to_html(request, history)
+            if history:
+                messages.history_version_display(request, rel_path, history)
     else:
         messages.permission_denied_msg_page(request, rel_path)
         page_content = ""
@@ -50,65 +79,75 @@ def page(request, rel_path):
         context,
         request,
         rel_path=rel_path,
-        title=p.title,
-        upload_path=p.attachment_path,
+        title=title,
+        upload_path=rel_path,
         page_content=page_content,
-        is_available=p.userpage_is_available()
+        is_available=p is not None and not p.deleted
     )
     return render(request, 'pages/page.html', context=context)
 
 
 def edit(request, rel_path):
-    if access.write_page(request, rel_path):
+    acc = access_control(request, rel_path)
+    if acc.may_write():
         context = Context(request)      # needs to be executed first because of time mesurement
+        #
+        try:
+            p = PikiPage.objects.get(rel_path=rel_path)
+            is_available = True
+        except PikiPage.DoesNotExist:
+            p = PikiPage(rel_path=rel_path)
+            is_available = False
         #
         if not request.POST:
             history = request.GET.get("history")
             if history:
                 history = int(history)
-            #
-            p = page_wrapped(request, rel_path, history_version=history)
-            #
-            form = EditForm(page_data=p.raw_page_src, page_tags=p.tags)
+                form = EditForm(instance=p.history.get(history_id=history))
+            else:
+                form = EditForm(instance=p)
             #
             context_adaption(
                 context,
                 request,
                 rel_path=rel_path,
-                is_available=p.userpage_is_available(),
+                is_available=is_available,
                 form=form,
                 # TODO: Add translation
                 title=_("Edit page %s") % repr(p.title),
-                upload_path=p.attachment_path,
+                upload_path=rel_path,
             )
             return render(request, 'pages/page_edit.html', context=context)
         else:
-            p = page_wrapped(request, rel_path)
+            form = EditForm(request.POST, instance=p)
             #
             save = request.POST.get("save")
-            page_txt = request.POST.get("page_txt")
-            tags = request.POST.get("page_tags")
             preview = request.POST.get("preview")
             #
             if save is not None:
-                if p.update_page(page_txt, tags):
-                    messages.edit_success(request)
+                if form.is_valid():
+                    form.instance.prepare_save(request)
+                    page = form.save()
+                    if page.save_needed:
+                        messages.edit_success(request)
+                        # update search index
+                        update_item(page)
+                    else:
+                        messages.no_change(request)
                 else:
-                    messages.no_change(request)
+                    messages.internal_error(request)
                 return HttpResponseRedirect(url_page(rel_path))
             elif preview is not None:
-                form = EditForm(page_data=page_txt, page_tags=tags)
-                #
                 context_adaption(
                     context,
                     request,
                     rel_path=rel_path,
-                    is_available=p.userpage_is_available(),
+                    is_available=is_available,
                     form=form,
                     # TODO: Add translation
                     title=_("Edit page %s") % repr(p.title),
-                    upload_path=p.attachment_path,
-                    page_content=p.render_text(request, page_txt)
+                    upload_path=rel_path,
+                    page_content=p.render_text(request, form.data.get("page_txt"))
                 )
                 return render(request, 'pages/page_edit.html', context=context)
             else:
@@ -119,11 +158,18 @@ def edit(request, rel_path):
 
 
 def delete(request, rel_path):
-    if access.write_page(request, rel_path):
+    acc = access_control(request, rel_path)
+    if acc.may_write():
         context = Context(request)      # needs to be executed first because of time mesurement
         #
+        try:
+            p = PikiPage.objects.get(rel_path=rel_path)
+            is_available = True
+        except PikiPage.DoesNotExist:
+            p = PikiPage(rel_path=rel_path)
+            is_available = False
+        #
         if not request.POST:
-            p = page_wrapped(request, rel_path)
             #
             # form = DeleteForm(page_data=p.raw_page_src, page_tags=p.tags)
             #
@@ -131,24 +177,21 @@ def delete(request, rel_path):
                 context,
                 request,
                 rel_path=rel_path,
-                is_available=p.userpage_is_available(),
-                # form=form,
+                is_available=is_available,
                 # TODO: Add translation
                 title=_("Delete page %s") % repr(p.title),
-                upload_path=p.attachment_path,
-                page_content=p.render_to_html(),
+                upload_path=rel_path,
+                page_content=p.render_to_html(request),
             )
         else:
-            p = page_wrapped(request, rel_path)
-            #
             delete = request.POST.get("delete")
             #
             if delete:
+                p.deleted = True
+                p.save()
                 # delete page from search index
                 ix = load_index()
                 delete_item(ix, p)
-                # delete move files to history
-                p.delete()
                 # add delete message
                 messages.page_deleted(request, p.title)
                 return HttpResponseRedirect("/")
@@ -162,28 +205,32 @@ def delete(request, rel_path):
 
 
 def rename(request, rel_path):
-    if access.write_page(request, rel_path):
+    acc = access_control(request, rel_path)
+    if acc.may_write():
         context = Context(request)      # needs to be executed first because of time mesurement
         #
+        try:
+            p = PikiPage.objects.get(rel_path=rel_path)
+            is_available = True
+        except PikiPage.DoesNotExist:
+            p = PikiPage(rel_path=rel_path)
+            is_available = False
+        #
         if not request.POST:
-            p = page_wrapped(request, rel_path)
-            #
             form = RenameForm(page_name=p.rel_path)
             #
             context_adaption(
                 context,
                 request,
                 rel_path=rel_path,
-                is_available=p.userpage_is_available(),
+                is_available=is_available,
                 form=form,
                 # TODO: Add translation
                 title=_("Delete page %s") % repr(p.title),
-                upload_path=p.attachment_path,
-                page_content=p.render_to_html(),
+                upload_path=rel_path,
+                page_content=p.render_to_html(request),
             )
         else:
-            p = page_wrapped(request, rel_path)
-            #
             rename = request.POST.get("rename")
             page_name = request.POST.get("page_name")
             if rename:
@@ -194,7 +241,8 @@ def rename(request, rel_path):
                     ix = load_index()
                     delete_item(ix, p)
                     # rename the storage folder
-                    p.rename(page_name)
+                    p.rel_path = page_name
+                    p.save()
                     # add the renamed page to the search index
                     add_item(ix, p)
                     # add rename message
@@ -217,7 +265,7 @@ def search(request):
     if sr is None:
         django_messages.error(request, _('Invalid search pattern: %s') % repr(search_txt))
         sr = []
-    pl = page_list(request, [page_wrapped(request, rel_path) for rel_path in set(sr)])
+    pl = page_list([PikiPage.objects.get(rel_path=rel_path) for rel_path in set(sr)])
     #
     context_adaption(
         context,

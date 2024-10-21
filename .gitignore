@@ -1,6 +1,6 @@
 # piki
 data/media
-data/pages
+data/mycreole
 data/static
 data/whoosh
 db.sqlite3

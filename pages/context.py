@@ -5,7 +5,7 @@ import os
 from django.conf import settings
 from django.utils.translation import gettext as _
 
-from pages import access
+from pages.access import access_control
 import pages.parameter
 from .help import actionbar as actionbar_add_help
 import mycreole
@@ -74,11 +74,12 @@ def actionbar(context, request, caller_name, **kwargs):
     bar = context[context.ACTIONBAR]
     if not cms_mode_active(request):
         if caller_name in ['page', 'edit', 'delete', 'rename']:
-            if access.write_page(request, kwargs["rel_path"]):
+            acc = access_control(request, kwargs["rel_path"])
+            if acc.may_write():
                 add_page_menu(request, bar, kwargs["rel_path"], kwargs.get('is_available', False))
-            if access.modify_attachment(request, kwargs["rel_path"]):
+            if acc.may_modify_attachment():
                 add_manageupload_menu(request, bar, kwargs['upload_path'], kwargs.get('is_available', False))
-            if access.read_page(request, kwargs["rel_path"]):
+            if acc.may_read():
                 add_meta_menu(request, bar, kwargs["rel_path"], kwargs.get('is_available', False))
         elif caller_name == 'helpview':
             actionbar_add_help(context, request, **kwargs)

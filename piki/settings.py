@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    #
+    'simple_history',
 ]
 
 MIDDLEWARE = [
@@ -124,7 +126,7 @@ STATIC_URL = 'static/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'data', 'media')
 MEDIA_URL = '/media/'
 
-MYCREOLE_ROOT = os.path.join(BASE_DIR, 'data', 'pages')
+MYCREOLE_ROOT = os.path.join(BASE_DIR, 'data', 'mycreole')
 MYCREOLE_ATTACHMENT_ACCESS = {
     'read': 'pages.access.read_attachment',
     'modify': 'pages.access.modify_attachment',

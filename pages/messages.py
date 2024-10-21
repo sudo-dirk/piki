@@ -8,6 +8,11 @@ def permission_denied_msg_page(request, rel_path):
     messages.error(request, _("Permission denied: You don't have sufficient acces to the Page '%s'. Please contact the adminstrator.") % rel_path)
 
 
+def deleted_page(request):
+    # TODO: Add translation for this message
+    messages.info(request, _("Page was deleted. Recover not yet implemented. Use the 'Administration' area for recovery. Rebuild the search index afterwards."))
+
+
 def unavailable_msg_page(request, rel_path):
     # TODO: Add translation for this message
     messages.info(request, _("Unavailable: The Page '%s' is not available. Create it or follow a valid link, please.") % rel_path)
@@ -36,6 +41,11 @@ def page_deleted(request, title):
 def page_renamed(request):
     # TODO: Add translation for this message
     messages.info(request, _('The page has been renamed.'))
+
+
+def internal_error(request):
+    # TODO: Add translation for this message
+    messages.error(request, _('internal ERROR: Action not performed..'))
 
 
 def history_version_display(request, rel_path, history_version):
