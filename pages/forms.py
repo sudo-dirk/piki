@@ -9,7 +9,12 @@ from .models import PikiPage
 class EditForm(forms.ModelForm):
     class Meta:
         model = PikiPage
-        fields = ["page_txt", "tags", "owner", "group"]
+        fields = [
+            "page_txt",
+            "tags",
+            "owner", "owner_perms_read", "owner_perms_write",
+            "group", "group_perms_read", "group_perms_write",
+            "other_perms_read", "other_perms_write",]
 
 
 class RenameForm(forms.Form):  # Note that it is not inheriting from forms.ModelForm

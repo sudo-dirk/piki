@@ -35,8 +35,24 @@ CREOLE += mycreole.render_simple("""
 
 ACCESS = mycreole.render_simple(_("""
 = Access
-* Currently just two specific users have write access.
-* Pages containing "private" in the relative page path have no public read access.
+== Administrator
+If the user has //Superuser status//, the user is able to create, read and write all pages.
+== Create new pages
+Only users with //Superuser status// or //Staff status// are able to create new pages.
+== Page rigths
+All following subsections are able to grant read or write access to the user
+=== Owner permissions
+Every page has an owner, if the user is the owner, the defined read or write permissions will be granted.
+=== Group permissions
+Every page has a group, if the user is in that group, the defined read or write permissions will be granted.
+=== Other permissions
+If no other mechanism granted the permissions, the defined read or write permissions for all other users will be granted.
+
+= Default permissions
+| =Mechanism | =Read | Write |
+| Owner      |   X   |   X   |
+| Group      |   X   |   X   |
+| Other      |   X   |   -   |
 """))
 
 SEARCH = mycreole.render_simple(_(

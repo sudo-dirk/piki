@@ -78,6 +78,7 @@ def page(request, rel_path):
     context_adaption(
         context,
         request,
+        acc=acc,
         rel_path=rel_path,
         title=title,
         upload_path=rel_path,
@@ -110,6 +111,7 @@ def edit(request, rel_path):
             context_adaption(
                 context,
                 request,
+                acc=acc,
                 rel_path=rel_path,
                 is_available=is_available,
                 form=form,
@@ -141,6 +143,7 @@ def edit(request, rel_path):
                 context_adaption(
                     context,
                     request,
+                    acc=acc,
                     rel_path=rel_path,
                     is_available=is_available,
                     form=form,
@@ -176,6 +179,7 @@ def delete(request, rel_path):
             context_adaption(
                 context,
                 request,
+                acc=acc,
                 rel_path=rel_path,
                 is_available=is_available,
                 # TODO: Add translation
@@ -222,6 +226,7 @@ def rename(request, rel_path):
             context_adaption(
                 context,
                 request,
+                acc=acc,
                 rel_path=rel_path,
                 is_available=is_available,
                 form=form,

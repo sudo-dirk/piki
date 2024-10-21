@@ -34,8 +34,14 @@ class PikiPage(models.Model):
     owner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="owner")
     group = models.ForeignKey(Group, null=True, blank=True, on_delete=models.SET_NULL, related_name="group")
     # owner_perms
+    owner_perms_read = models.BooleanField(default=True)
+    owner_perms_write = models.BooleanField(default=True)
     # group_perms
+    group_perms_read = models.BooleanField(default=True)
+    group_perms_write = models.BooleanField(default=True)
     # other_perms
+    other_perms_read = models.BooleanField(default=True)
+    other_perms_write = models.BooleanField(default=False)
     #
     history = HistoricalRecords()
 

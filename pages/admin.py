@@ -10,6 +10,8 @@ class PikiPageAdmin(SimpleHistoryAdmin):
     search_fields = ('rel_path', 'tags', )
     list_filter = (
         ('deleted', admin.BooleanFieldListFilter),
+        ('other_perms_read', admin.BooleanFieldListFilter),
+        ('other_perms_write', admin.BooleanFieldListFilter),
     )
     ordering = ["rel_path"]
 
