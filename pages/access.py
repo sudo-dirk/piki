@@ -1,5 +1,6 @@
 from django.conf import settings
 import logging
+import os
 
 from .models import PikiPage
 
@@ -31,11 +32,11 @@ class access_control(object):
             elif self._page is None:
                 if self._user.is_staff:
                     # Page creation is allowed for staff users
-                    logger.debug("Page does not exist and user is staff -> full access granted")
+                    logger.debug("Page %s does not exist and user is staff -> full access granted", repr(self._rel_path))
                     self._read = True
                     self._write = True
                 else:
-                    logger.debug("Page does not exist and user is not staff -> no access granted")
+                    logger.debug("Page %s does not exist and user is not staff -> no access granted", repr(self._rel_path))
             else:
                 user_is_owner = self._page.owner == self._user
                 user_in_page_group = self._page.group in self._user.groups.all()
@@ -75,11 +76,13 @@ class access_control(object):
         return self.may_write()
 
 
-def read_attachment(request, rel_path):
+def read_attachment(request, path):
     # Interface for external module mycreole
+    rel_path = os.path.dirname(path)
     return access_control(request, rel_path).may_read_attachment()
 
 
-def modify_attachment(request, rel_path):
+def modify_attachment(request, path):
     # Interface for external module mycreole
+    rel_path = os.path.dirname(path)
     return access_control(request, rel_path).may_modify_attachment()
