@@ -270,15 +270,18 @@ def search(request):
     if sr is None:
         django_messages.error(request, _('Invalid search pattern: %s') % repr(search_txt))
         sr = []
-    pl = page_list([PikiPage.objects.get(rel_path=rel_path) for rel_path in set(sr)])
-    #
-    context_adaption(
-        context,
-        request,
-        title=_("Searchresults"),
-        page_content=mycreole.render_simple(pl.creole_list())
-    )
-    return render(request, 'pages/page.html', context=context)
+    if len(sr) == 1:
+        return HttpResponseRedirect(url_page(sr[0]))
+    else:
+        pl = page_list([PikiPage.objects.get(rel_path=rel_path) for rel_path in set(sr)])
+        #
+        context_adaption(
+            context,
+            request,
+            title=_("Searchresults"),
+            page_content=mycreole.render_simple(pl.creole_list())
+        )
+        return render(request, 'pages/page.html', context=context)
 
 
 def helpview(request, page='main'):
