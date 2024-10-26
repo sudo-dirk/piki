@@ -53,7 +53,7 @@ def page(request, rel_path):
     title = rel_path.split("/")[-1]
     #
     acc = access_control(request, rel_path)
-    if acc.may_read():
+    if acc.may_read() or (p is None and rel_path == config.STARTPAGE):
         if p is None or p.deleted:
             if rel_path == config.STARTPAGE:
                 page_content = mycreole.render_simple(SUCCESS_PAGE)
