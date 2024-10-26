@@ -141,6 +141,8 @@ PAGES_ROOT = os.path.join(BASE_DIR, 'data', 'pages')
 
 WHOOSH_PATH = os.path.join(BASE_DIR, 'data', 'whoosh')
 
+LOGIN_URL = 'users-login'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -162,6 +164,18 @@ USER_CONFIG_DEFAULTS = {
     'DEFAULT_THEME': 'clear-blue',
     'ALLOWED_HOSTS': ['127.0.0.1', 'localhost', ],
     'CSRF_TRUSTED_ORIGINS': [],
+    'ADMINS': [],
+    #
+    'EMAIL_HOST': None,
+    'EMAIL_PORT': None,
+    'EMAIL_HOST_USER': None,
+    'EMAIL_FROM': "piki",
+    'EMAIL_HOST_PASSWORD': None,
+    'EMAIL_USE_TLS': None,
+    'EMAIL_USE_SSL': None,
+    'EMAIL_TIMEOUT': None,
+    'EMAIL_SSL_KEYFILE': None,
+    'EMAIL_SSL_CERTFILE': None,
 }
 
 # Set configuration parameters
@@ -170,9 +184,12 @@ thismodule = sys.modules[__name__]
 for property_name in USER_CONFIG_DEFAULTS:
     try:
         value = getattr(config, property_name)
+        setattr(thismodule, property_name, value)
     except AttributeError:
-        value = USER_CONFIG_DEFAULTS[property_name]
-    setattr(thismodule, property_name, value)
+        if not property_name.startswith('EMAIL_') or property_name == 'EMAIL_FROM':
+            value = USER_CONFIG_DEFAULTS[property_name]
+            setattr(thismodule, property_name, value)
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
 #
