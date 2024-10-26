@@ -62,7 +62,7 @@ DEBUG = False
 SECRET_KEY = None
 
 # Define the administrators (for mail delivery)
-ADMINS = [("Piki", {EMAIL_FROM}), ]
+ADMINS = [("Piki", EMAIL_FROM), ]
 
 
 # This defines the listener hostnames for your django server
